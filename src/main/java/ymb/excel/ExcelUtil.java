@@ -1,6 +1,5 @@
 package ymb.excel;
 
-import lombok.*;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -25,8 +24,6 @@ import java.util.function.Consumer;
 public final class ExcelUtil<T> {
     private final SheetOperate<T> sheetOperate;
     private final Stack<SheetOperate<?>> otherSheet = new Stack<>();
-    @Setter
-    @Getter
     private XSSFWorkbook workbook;
     private SheetOperate<?> currentSheet;
 
@@ -42,6 +39,14 @@ public final class ExcelUtil<T> {
         this.sheetOperate = SheetOperate.create(tClass, sheetName);
         this.sheetOperate.setWorkbook(workbook);
         otherSheet.add(this.sheetOperate);
+    }
+
+    public XSSFWorkbook getWorkbook() {
+        return workbook;
+    }
+
+    public void setWorkbook(XSSFWorkbook workbook) {
+        this.workbook = workbook;
     }
 
     /**
@@ -187,9 +192,7 @@ public final class ExcelUtil<T> {
      * @throws IOException write异常
      */
     public byte[] toByteArray() throws IOException {
-        try (XSSFWorkbook workbook = execute().workbook) {
-            @Cleanup
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
+        try (XSSFWorkbook workbook = execute().workbook; ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             workbook.write(os);
             os.flush();
             return os.toByteArray();
@@ -220,7 +223,7 @@ public final class ExcelUtil<T> {
     }
 
     private int setExcelTitle(List<CellField> fieldList) {
-        Class<?> tClass = currentSheet.getTClass();
+        Class<?> tClass = currentSheet.gettClass();
         XSSFSheet sheet = currentSheet.getSheet();
         ExcelClass excelClass = tClass.getAnnotation(ExcelClass.class);
         int startRow = excelClass != null ? 1 : 0;

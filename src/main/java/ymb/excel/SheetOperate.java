@@ -1,6 +1,5 @@
 package ymb.excel;
 
-import lombok.Getter;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -24,23 +23,16 @@ import java.util.stream.Collectors;
 public final class SheetOperate<T> {
     private XSSFWorkbook workbook;
     private XSSFSheet sheet;
-    @Getter
     private String sheetName;
-    @Getter
     private List<T> data;
     private Consumer<XSSFCell> operateTitle;
     private BiConsumer<XSSFCell, Object> operateValue;
     private BiConsumer<XSSFSheet, List<T>> operateSheet;
     private List<CellField> fields;
-    @Getter
     private final Class<T> tClass;
-    @Getter
     private short titleSize = 12;
-    @Getter
     private short valueSize = 11;
-    @Getter
     private float titleHeight = 25;
-    @Getter
     private float valueHeight = 20;
     private final Map<Integer, BiConsumer<XSSFCellStyle, Object>> valueStyleFunMap = new HashMap<>();
     private Consumer<XSSFCellStyle> valueStyleFun = cell -> {};
@@ -327,5 +319,33 @@ public final class SheetOperate<T> {
             cellStyle = newCellStyle;
         }
         return cellStyle;
+    }
+
+    public String getSheetName() {
+        return sheetName;
+    }
+
+    public List<T> getData() {
+        return data;
+    }
+
+    public Class<T> gettClass() {
+        return tClass;
+    }
+
+    public short getTitleSize() {
+        return titleSize;
+    }
+
+    public short getValueSize() {
+        return valueSize;
+    }
+
+    public float getTitleHeight() {
+        return titleHeight;
+    }
+
+    public float getValueHeight() {
+        return valueHeight;
     }
 }

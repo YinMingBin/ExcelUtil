@@ -1,6 +1,5 @@
 package ymb.excel;
 
-import lombok.Data;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFDataFormat;
@@ -13,7 +12,6 @@ import java.lang.reflect.Field;
 /**
  * @author YinMingBin
  */
-@Data
 class ExcelColumnClass {
     @ExcelColumn
     private static ExcelColumn defaultColumn;
@@ -100,5 +98,101 @@ class ExcelColumnClass {
         cellStyle.setVerticalAlignment(this.getVertical());
         // 自动换行
         cellStyle.setWrapText(this.isWrapText());
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public short getIndex() {
+        return index;
+    }
+
+    public void setIndex(short index) {
+        this.index = index;
+    }
+
+    public CellType getType() {
+        return type;
+    }
+
+    public void setType(CellType type) {
+        this.type = type;
+    }
+
+    public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public boolean isWrapText() {
+        return wrapText;
+    }
+
+    public void setWrapText(boolean wrapText) {
+        this.wrapText = wrapText;
+    }
+
+    public IndexedColors getBackground() {
+        return background;
+    }
+
+    public void setBackground(IndexedColors background) {
+        this.background = background;
+    }
+
+    public IndexedColors getColor() {
+        return color;
+    }
+
+    public void setColor(IndexedColors color) {
+        this.color = color;
+    }
+
+    public short getSize() {
+        return size;
+    }
+
+    public void setSize(short size) {
+        this.size = size;
+    }
+
+    public FillPatternType getPattern() {
+        return pattern;
+    }
+
+    public void setPattern(FillPatternType pattern) {
+        this.pattern = pattern;
+    }
+
+    public HorizontalAlignment getHorizontal() {
+        return horizontal;
+    }
+
+    public void setHorizontal(HorizontalAlignment horizontal) {
+        this.horizontal = horizontal;
+    }
+
+    public VerticalAlignment getVertical() {
+        return vertical;
+    }
+
+    public void setVertical(VerticalAlignment vertical) {
+        this.vertical = vertical;
     }
 }
