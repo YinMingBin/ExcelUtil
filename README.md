@@ -1,6 +1,5 @@
 # ExcelUtil （封装POI）
-通过在类中设置注解，然后调用工具类生成对应的Excel
-v2.0+ 支持转换成csv
+在类中设置注解，调用工具类生成对应的Excel
 ```
 <dependency>
     <groupId>io.github.yinmingbin</groupId>
@@ -8,3 +7,4 @@ v2.0+ 支持转换成csv
     <version>1.3</version>
 </dependency>
 ```
+v2.0+ 支持转换成csv
