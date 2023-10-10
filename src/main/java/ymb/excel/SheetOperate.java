@@ -178,6 +178,10 @@ public final class SheetOperate<T> {
         return sheet;
     }
 
+    void clearSheet() {
+        this.sheet = null;
+    }
+
     XSSFCellStyle getValueStyle() {
         XSSFCellStyle cellStyle = workbook.createCellStyle();
         // 设置字体

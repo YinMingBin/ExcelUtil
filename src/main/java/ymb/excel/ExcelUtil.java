@@ -1,14 +1,13 @@
 package ymb.excel;
 
-import org.apache.poi.ss.usermodel.BorderStyle;
-import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.RichTextString;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
 import ymb.excel.annotation.ExcelClass;
 
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -24,8 +23,9 @@ import java.util.function.Consumer;
 public final class ExcelUtil<T> {
     private final SheetOperate<T> sheetOperate;
     private final Stack<SheetOperate<?>> otherSheet = new Stack<>();
-    private XSSFWorkbook workbook;
+    private final XSSFWorkbook workbook;
     private SheetOperate<?> currentSheet;
+    private String csv;
 
     public ExcelUtil(Class<T> tClass) {
         this.workbook = new XSSFWorkbook();
@@ -45,8 +45,8 @@ public final class ExcelUtil<T> {
         return workbook;
     }
 
-    public void setWorkbook(XSSFWorkbook workbook) {
-        this.workbook = workbook;
+    public String getCsv() {
+        return csv;
     }
 
     /**
@@ -176,7 +176,11 @@ public final class ExcelUtil<T> {
      * @return this
      */
     public ExcelUtil<T> execute() {
+        for (int i = workbook.getNumberOfSheets() - 1; i >= 0; i--) {
+            workbook.removeSheetAt(i);
+        }
         for (SheetOperate<?> operate : otherSheet) {
+            operate.clearSheet();
             List<CellField> fields = operate.getFields();
             this.currentSheet = operate;
             int maxRow = setExcelTitle(fields);
@@ -202,23 +206,127 @@ public final class ExcelUtil<T> {
     /**
      * 执行并写入OutputStream
      * @param os OutputStream流
+     * @return this
      * @throws IOException write异常
      */
-    public void write(OutputStream os) throws IOException {
-        try (XSSFWorkbook workbook = execute().workbook) {
-            workbook.write(os);
-            os.flush();
-        }
+    public ExcelUtil<T> write(OutputStream os) throws IOException {
+        XSSFWorkbook workbook = execute().workbook;
+        workbook.write(os);
+        os.flush();
+        return this;
     }
 
     /**
      * 执行并写入文件
      * @param filePath 文件路径
+     * @return this
      * @throws IOException write异常
      */
-    public void writeFile(String filePath) throws IOException {
+    public ExcelUtil<T> writeFile(String filePath) throws IOException {
         try (OutputStream os = new BufferedOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
             write(os);
+        }
+        return this;
+    }
+
+    /**
+     * 生成csv格式
+     * @return this
+     */
+    public ExcelUtil<T> toCsv() {
+        return toCsv(',', "\"", "\"\"", "\r\n");
+    }
+
+    /**
+     * 生成csv格式
+     * @param separator 分隔符
+     * @param label 字段标识
+     * @param escape 转义符
+     * @param line 换行符
+     * @return this
+     */
+    public ExcelUtil<T> toCsv(char separator, CharSequence label, CharSequence escape, String line) {
+        StringBuilder sb = new StringBuilder();
+        List<CellField> fields = sheetOperate.getFields();
+        // title
+        for (CellField field : fields) {
+            String title = field.getTitle().replace(label, escape);
+            sb.append(separator).append(label).append(title).append(label);
+        }
+        sb.deleteCharAt(0);
+        // value
+        List<T> data = sheetOperate.getData();
+        if (data != null) {
+            for (T datum : data) {
+                StringBuilder vsb = new StringBuilder();
+                for (CellField field : fields) {
+                    String value = String.valueOf(field.getValueFun().apply(datum));
+                    value = value.replace(label, escape);
+                    vsb.append(separator).append(label).append(value).append(label);
+                }
+                sb.append(line).append(vsb.deleteCharAt(0));
+            }
+        }
+        csv = sb.toString();
+        return this;
+    }
+
+    /**
+     * 将csv写入到输出流并指定字符集
+     * @param os 输出流
+     * @param charset 字符集
+     * @return this
+     * @throws IOException write异常
+     */
+    public ExcelUtil<T> writeCsv(OutputStream os, Charset charset) throws IOException {
+        byte[] bytes = csv.getBytes(charset);
+        os.write(bytes);
+        os.flush();
+        return this;
+    }
+
+    /**
+     * 将csv写入到输出流（UTF-8）
+     * @param os 输出流
+     * @return this
+     * @throws IOException write异常
+     */
+    public ExcelUtil<T> writeCsv(OutputStream os) throws IOException {
+        return writeCsv(os, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 将csv写入到文件并指定字符集
+     * @param filePath 文件路径
+     * @param charset 字符集
+     * @return this
+     * @throws IOException write异常
+     */
+    public ExcelUtil<T> writeCsv(String filePath, Charset charset) throws IOException {
+        try (OutputStream os = new BufferedOutputStream(Files.newOutputStream(Paths.get(filePath)))) {
+            writeCsv(os, charset);
+        }
+        return this;
+    }
+
+    /**
+     * 将csv写入到文件（UTF-8）
+     * @param filePath 文件路径
+     * @return this
+     * @throws IOException write异常
+     */
+    public ExcelUtil<T> writeCsv(String filePath) throws IOException {
+        return writeCsv(filePath, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 关闭流
+     */
+    public void close() {
+        try {
+            workbook.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
