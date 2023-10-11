@@ -1,11 +1,11 @@
-package ymb.excel;
+package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.xssf.usermodel.*;
-import ymb.excel.annotation.AllFieldColumn;
+import ymb.github.excel.annotation.AllFieldColumn;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

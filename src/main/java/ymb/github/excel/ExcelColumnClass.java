@@ -1,11 +1,11 @@
-package ymb.excel;
+package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFDataFormat;
 import org.apache.poi.xssf.usermodel.XSSFFont;
-import ymb.excel.annotation.AllFieldColumn;
-import ymb.excel.annotation.ExcelColumn;
+import ymb.github.excel.annotation.AllFieldColumn;
+import ymb.github.excel.annotation.ExcelColumn;
 
 import java.lang.reflect.Field;
 

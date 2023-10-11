@@ -1,9 +1,9 @@
-package ymb.excel;
+package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.*;
-import ymb.excel.annotation.ExcelClass;
+import ymb.github.excel.annotation.ExcelClass;
 
 import java.io.*;
 import java.nio.charset.Charset;
