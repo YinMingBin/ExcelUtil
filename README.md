@@ -4,8 +4,7 @@
 <dependency>
     <groupId>io.github.yinmingbin</groupId>
     <artifactId>ExcelUtil</artifactId>
-    <version>1.3</version>
+    <version>2.0.1</version>
 </dependency>
 ```
-* v1.2+ 才可以用
-* v2.0+ 支持转换成csv
+* 包名改为ymb.github.excel
