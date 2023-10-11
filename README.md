@@ -7,5 +7,5 @@
     <version>1.3</version>
 </dependency>
 ```
-* v1.3+ 才可以用
+* v1.2+ 才可以用
 * v2.0+ 支持转换成csv
