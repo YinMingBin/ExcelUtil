@@ -15,12 +15,13 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * @author YinMingBin
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
-public final class ExcelUtil<T> {
+public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     private final SheetOperate<T> sheetOperate;
     private final Stack<SheetOperate<?>> otherSheet = new Stack<>();
     private final XSSFWorkbook workbook;
@@ -54,7 +55,8 @@ public final class ExcelUtil<T> {
      * @param data 数据源
      * @return this
      */
-    public ExcelUtil<T> setDataList(List<T> data) {
+    @Override
+    public ExcelUtil<T> setData(List<T> data) {
         sheetOperate.setData(data);
         return this;
     }
@@ -64,6 +66,7 @@ public final class ExcelUtil<T> {
      * @param titleSize 字体大小
      * @return this
      */
+    @Override
     public ExcelUtil<T> setTitleSize(short titleSize) {
         sheetOperate.setTitleSize(titleSize);
         return this;
@@ -74,6 +77,7 @@ public final class ExcelUtil<T> {
      * @param valueSize 字体大小
      * @return this
      */
+    @Override
     public ExcelUtil<T> setValueSize(short valueSize) {
         sheetOperate.setValueSize(valueSize);
         return this;
@@ -84,6 +88,7 @@ public final class ExcelUtil<T> {
      * @param titleHeight 行高
      * @return this
      */
+    @Override
     public ExcelUtil<T> setTitleHeight(short titleHeight) {
         sheetOperate.setTitleHeight(titleHeight);
         return this;
@@ -94,6 +99,7 @@ public final class ExcelUtil<T> {
      * @param valueHeight 行高
      * @return this
      */
+    @Override
     public ExcelUtil<T> setValueHeight(short valueHeight) {
         sheetOperate.setValueHeight(valueHeight);
         return this;
@@ -104,6 +110,7 @@ public final class ExcelUtil<T> {
      * @param columnWidth 列宽
      * @return this
      */
+    @Override
     public ExcelUtil<T> setColumnWidth(int columnWidth) {
         sheetOperate.setColumnWidth(columnWidth);
         return this;
@@ -114,6 +121,7 @@ public final class ExcelUtil<T> {
      * @param titleStyle (CellStyle) -> void
      * @return this
      */
+    @Override
     public ExcelUtil<T> setTitleStyle(Consumer<XSSFCellStyle> titleStyle) {
         sheetOperate.setTitleStyle(titleStyle);
         return this;
@@ -124,6 +132,7 @@ public final class ExcelUtil<T> {
      * @param valueStyle (CellStyle) -> void
      * @return this
      */
+    @Override
     public ExcelUtil<T> setValueStyle(Consumer<XSSFCellStyle> valueStyle) {
         sheetOperate.setValueStyle(valueStyle);
         return this;
@@ -135,6 +144,7 @@ public final class ExcelUtil<T> {
      * @param valueStyle (CellStyle, value) -> void
      * @return this
      */
+    @Override
     public ExcelUtil<T> operateValueStyle(int index, BiConsumer<XSSFCellStyle, Object> valueStyle) {
         sheetOperate.operateValueStyle(index, valueStyle);
         return this;
@@ -145,6 +155,7 @@ public final class ExcelUtil<T> {
      * @param operateTitle (Cell) -> void
      * @return this
      */
+    @Override
     public ExcelUtil<T> operateTitle(Consumer<XSSFCell> operateTitle) {
         sheetOperate.operateTitle(operateTitle);
         return this;
@@ -155,6 +166,7 @@ public final class ExcelUtil<T> {
      * @param operateValue (Cell, data) -> void
      * @return this
      */
+    @Override
     public ExcelUtil<T> operateValue(BiConsumer<XSSFCell, Object> operateValue) {
         sheetOperate.operateValue(operateValue);
         return this;
@@ -165,8 +177,33 @@ public final class ExcelUtil<T> {
      * @param operateSheet (Sheet, dataList) -> void
      * @return this
      */
+    @Override
     public ExcelUtil<T> operateSheet(BiConsumer<XSSFSheet, List<T>> operateSheet) {
         sheetOperate.operateSheet(operateSheet);
+        return this;
+    }
+
+    /**
+     * 设置列
+     * @param functions 字段的get方法（不定项参数）
+     * @return this
+     */
+    @SafeVarargs
+    @Override
+    public final ExcelUtil<T> settingColumn(SFunction<T, Object>... functions) {
+        sheetOperate.settingColumn(functions);
+        return this;
+    }
+
+    /**
+     * 设置列
+     * @param function 字段的get方法
+     * @param columnClass 列属性
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> settingColumn(SFunction<T, ?> function, ExcelColumnClass columnClass) {
+        sheetOperate.settingColumn(function, columnClass);
         return this;
     }
 
@@ -192,6 +229,9 @@ public final class ExcelUtil<T> {
         for (SheetOperate<?> operate : otherSheet) {
             operate.clearSheet();
             List<CellField> fields = operate.getFields();
+            if (fields.isEmpty()) {
+                continue;
+            }
             this.currentSheet = operate;
             int maxRow = setExcelTitle(fields);
             setExcelData(operate.getData(), fields, maxRow + 1);

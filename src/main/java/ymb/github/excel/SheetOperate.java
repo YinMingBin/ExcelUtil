@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.xssf.usermodel.*;
 import ymb.github.excel.annotation.AllFieldColumn;
 
+import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -14,13 +15,14 @@ import java.lang.reflect.ParameterizedType;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * @author YinMingBin
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
-public final class SheetOperate<T> {
+public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private XSSFWorkbook workbook;
     private XSSFSheet sheet;
     private String sheetName;
@@ -65,6 +67,7 @@ public final class SheetOperate<T> {
      * @param data 数据源
      * @return this
      */
+    @Override
     public SheetOperate<T> setData(List<T> data) {
         this.data = data;
         return this;
@@ -75,6 +78,7 @@ public final class SheetOperate<T> {
      * @param titleSize 字体大小
      * @return this
      */
+    @Override
     public SheetOperate<T> setTitleSize(short titleSize) {
         this.titleSize = titleSize;
         return this;
@@ -85,6 +89,7 @@ public final class SheetOperate<T> {
      * @param valueSize 字体大小
      * @return this
      */
+    @Override
     public SheetOperate<T> setValueSize(short valueSize) {
         this.valueSize = valueSize;
         return this;
@@ -95,6 +100,7 @@ public final class SheetOperate<T> {
      * @param titleHeight 行高
      * @return this
      */
+    @Override
     public SheetOperate<T> setTitleHeight(short titleHeight) {
         this.titleHeight = titleHeight;
         return this;
@@ -105,6 +111,7 @@ public final class SheetOperate<T> {
      * @param valueHeight 行高
      * @return this
      */
+    @Override
     public SheetOperate<T> setValueHeight(short valueHeight) {
         this.valueHeight = valueHeight;
         return this;
@@ -113,7 +120,9 @@ public final class SheetOperate<T> {
     /**
      * 设置列宽
      * @param columnWidth 列宽
+     * @return this
      */
+    @Override
     public SheetOperate<T> setColumnWidth(int columnWidth) {
         this.columnWidth = columnWidth;
         return this;
@@ -124,6 +133,7 @@ public final class SheetOperate<T> {
      * @param titleStyleFun (CellStyle) -> void
      * @return this
      */
+    @Override
     public SheetOperate<T> setTitleStyle(Consumer<XSSFCellStyle> titleStyleFun) {
         this.titleStyleFun = titleStyleFun;
         return this;
@@ -134,6 +144,7 @@ public final class SheetOperate<T> {
      * @param valueStyleFun (CellStyle) -> void
      * @return this
      */
+    @Override
     public SheetOperate<T> setValueStyle(Consumer<XSSFCellStyle> valueStyleFun) {
         this.valueStyleFun = valueStyleFun;
         return this;
@@ -145,6 +156,7 @@ public final class SheetOperate<T> {
      * @param valueStyle (CellStyle, value) -> void
      * @return this
      */
+    @Override
     public SheetOperate<T> operateValueStyle(int index, BiConsumer<XSSFCellStyle, Object> valueStyle) {
         valueStyleFunMap.put(index, valueStyle);
         return this;
@@ -155,6 +167,7 @@ public final class SheetOperate<T> {
      * @param operateTitle (Cell) -> void
      * @return this
      */
+    @Override
     public SheetOperate<T> operateTitle(Consumer<XSSFCell> operateTitle) {
         this.operateTitle = operateTitle;
         return this;
@@ -165,6 +178,7 @@ public final class SheetOperate<T> {
      * @param operateValue (Cell, data) -> void
      * @return this
      */
+    @Override
     public SheetOperate<T> operateValue(BiConsumer<XSSFCell, Object> operateValue) {
         this.operateValue = operateValue;
         return this;
@@ -175,8 +189,56 @@ public final class SheetOperate<T> {
      * @param operateSheet (Sheet, dataList) -> void
      * @return this
      */
+    @Override
     public SheetOperate<T> operateSheet(BiConsumer<XSSFSheet, List<T>> operateSheet) {
         this.operateSheet = operateSheet;
+        return this;
+    }
+
+    /**
+     * 设置列
+     * @param functions 字段的get方法（不定项参数）
+     * @return this
+     */
+    @SafeVarargs
+    @Override
+    public final SheetOperate<T> settingColumn(SFunction<T, Object>... functions) {
+        for (SFunction<T, ?> function : functions) {
+            if (function != null) {
+                settingColumn(function, ExcelColumnClass.build());
+            }
+        }
+        return this;
+    }
+
+    /**
+     * 设置列
+     * @param function 字段的get方法
+     * @param columnClass 列属性
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> settingColumn(SFunction<T, ?> function, ExcelColumnClass columnClass) {
+        if (function == null || columnClass == null) {
+            return this;
+        }
+
+        try {
+            String fieldName = getFieldName(function);
+            try {
+                Field field = gettClass().getDeclaredField(fieldName);
+                if (this.fields == null) {
+                    this.fields = new ArrayList<>();
+                }
+                this.fields.add(getCellField(gettClass(), field, columnClass));
+                sortFields(this.fields);
+            } catch (NoSuchFieldException e) {
+                System.err.println("Get Field: " + fieldName + " Fail!\n" + e.getMessage());
+            }
+        } catch (ReflectiveOperationException e) {
+            System.err.println("Get FieldName Fail!\n" + e.getMessage());
+        }
+
         return this;
     }
 
@@ -196,7 +258,7 @@ public final class SheetOperate<T> {
         XSSFCellStyle cellStyle = workbook.createCellStyle();
         // 设置字体
         XSSFFont font = workbook.createFont();
-        font.setFontHeightInPoints(valueSize);
+        font.setFontHeightInPoints(getValueSize());
         cellStyle.setFont(font);
         // 设置边框
         cellStyle.setBorderTop(BorderStyle.THIN);
@@ -218,7 +280,7 @@ public final class SheetOperate<T> {
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
         // 设置字体
         XSSFFont font = workbook.createFont();
-        font.setFontHeightInPoints(titleSize);
+        font.setFontHeightInPoints(getTitleSize());
         cellStyle.setFont(font);
         // 设置边框
         cellStyle.setBorderTop(BorderStyle.MEDIUM);
@@ -243,51 +305,54 @@ public final class SheetOperate<T> {
     private List<CellField> getFields(Class<?> tClass) {
         Field[] fields = tClass.getDeclaredFields();
         List<CellField> fieldList = new ArrayList<>();
-        XSSFDataFormat dataFormat = workbook.createDataFormat();
         AllFieldColumn fieldColumn = tClass.getAnnotation(AllFieldColumn.class);
         for (Field field : fields) {
             ExcelColumnClass column = ExcelColumnClass.getExcelColumn(fieldColumn, field);
             if (column != null) {
-                CellField cellField = new CellField();
-                cellField.setIndex(column.getIndex());
-                String name = field.getName();
-                char[] chars = name.toCharArray();
-                chars[0] = Character.toUpperCase(chars[0]);
-                String nameFormat = String.valueOf(chars);
-                cellField.setTitle(column.getTitle(), nameFormat.replaceAll("(?<![A-Z]|^)[A-Z]", " $0"));
-                String methodName = "get" + nameFormat;
-                try {
-                    final Method method = tClass.getDeclaredMethod(methodName);
-                    cellField.setValueFun(obj -> {
-                        try {
-                            return method.invoke(obj);
-                        } catch (IllegalAccessException | InvocationTargetException e) {
-                            System.err.println("Get Field: " + name + " Fail：" + methodName);
-                            return "";
-                        }
-                    });
-                } catch (NoSuchMethodException e) {
-                    System.err.println("The " + methodName + " method call failure");
-                }
-                if (Collection.class.isAssignableFrom(field.getType())) {
-                    ParameterizedType genericType = (ParameterizedType) field.getGenericType();
-                    Class<?> fieldType = (Class<?>) genericType.getActualTypeArguments()[0];
-                    cellField.setCellFields(getFields(fieldType));
-                } else {
-                    cellField.setCellType(column.getType());
-                    XSSFCellStyle cellStyle = getValueStyle();
-
-                    column.settingStyle(cellStyle, dataFormat);
-
-                    cellField.setCellStyle(cellStyle);
-                    int width = column.getWidth();
-                    cellField.setWidth(width > 0 ? width : getColumnWidth());
-                }
-                fieldList.add(cellField);
+                fieldList.add(getCellField(tClass, field, column));
             }
         }
         sortFields(fieldList);
         return fieldList;
+    }
+
+    private CellField getCellField(Class<?> tClass, Field field, ExcelColumnClass column) {
+        CellField cellField = new CellField();
+        cellField.setIndex(column.getIndex());
+        String name = field.getName();
+        char[] chars = name.toCharArray();
+        chars[0] = Character.toUpperCase(chars[0]);
+        String nameFormat = String.valueOf(chars);
+        cellField.setTitle(column.getTitle(), nameFormat.replaceAll("(?<![A-Z]|^)[A-Z]", " $0"));
+        String methodName = "get" + nameFormat;
+        try {
+            final Method method = tClass.getDeclaredMethod(methodName);
+            cellField.setValueFun(obj -> {
+                try {
+                    return method.invoke(obj);
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    System.err.println("Get " + name + " Field Get Method Fail：" + methodName + "\n" + e.getMessage());
+                    return "";
+                }
+            });
+        } catch (NoSuchMethodException e) {
+            System.err.println("The " + methodName + " method call failure\n" + e.getMessage());
+        }
+        if (Collection.class.isAssignableFrom(field.getType())) {
+            ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+            Class<?> fieldType = (Class<?>) genericType.getActualTypeArguments()[0];
+            cellField.setCellFields(getFields(fieldType));
+        } else {
+            cellField.setCellType(column.getType());
+            XSSFCellStyle cellStyle = getValueStyle();
+
+            column.settingStyle(cellStyle, workbook.createDataFormat());
+
+            cellField.setCellStyle(cellStyle);
+            int width = column.getWidth();
+            cellField.setWidth(width > 0 ? width : getColumnWidth());
+        }
+        return cellField;
     }
 
     private void sortFields(List<CellField> fieldList) {
@@ -307,7 +372,7 @@ public final class SheetOperate<T> {
 
     void operateSheet() {
         if (operateSheet != null) {
-            operateSheet.accept(getSheet(), data);
+            operateSheet.accept(getSheet(), getData());
         }
     }
 
@@ -334,6 +399,22 @@ public final class SheetOperate<T> {
             cellStyle = newCellStyle;
         }
         return cellStyle;
+    }
+
+    public static <T> String getFieldName(Function<T, ?> fn) throws ReflectiveOperationException {
+        // 从function取出序列化方法
+        Method writeReplaceMethod = fn.getClass().getDeclaredMethod("writeReplace");
+
+        // 从序列化方法取出序列化的lambda信息
+        boolean isAccessible = writeReplaceMethod.isAccessible();
+        writeReplaceMethod.setAccessible(true);
+        SerializedLambda serializedLambda = (SerializedLambda) writeReplaceMethod.invoke(fn);
+        writeReplaceMethod.setAccessible(isAccessible);
+
+        // 从lambda信息取出method、field、class等
+        String fieldName = serializedLambda.getImplMethodName().substring("get".length());
+        fieldName = fieldName.replaceFirst(fieldName.charAt(0) + "", (fieldName.charAt(0) + "").toLowerCase());
+        return fieldName;
     }
 
     public String getSheetName() {

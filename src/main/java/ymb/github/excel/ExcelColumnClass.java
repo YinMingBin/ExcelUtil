@@ -12,7 +12,8 @@ import java.lang.reflect.Field;
 /**
  * @author YinMingBin
  */
-class ExcelColumnClass {
+@SuppressWarnings({"unused", "UnusedReturnValue"})
+public class ExcelColumnClass {
     @ExcelColumn
     private static ExcelColumn defaultColumn;
     private String title;
@@ -39,14 +40,11 @@ class ExcelColumnClass {
 
     private ExcelColumnClass() {}
 
-    static ExcelColumnClass getExcelColumn(AllFieldColumn fieldColumn, Field field) {
-        ExcelColumn column = field.getAnnotation(ExcelColumn.class);
-        if (column == null) {
-            if (fieldColumn == null) {
-                return null;
-            }
-            column = defaultColumn;
-        }
+    public static ExcelColumnClass build() {
+        return getExcelColumnClass(defaultColumn);
+    }
+
+    private static ExcelColumnClass getExcelColumnClass(ExcelColumn column) {
         ExcelColumnClass columnClass = new ExcelColumnClass();
         String title = column.title();
         if (title.isEmpty()) {title = column.value();}
@@ -56,20 +54,32 @@ class ExcelColumnClass {
         columnClass.setFormat(column.format());
         columnClass.setColor(column.color());
         columnClass.setSize(column.size());
-        if (fieldColumn != null) {
+        columnClass.setWidth(column.width());
+        columnClass.setWrapText(column.wrapText());
+        columnClass.setBackground(column.background());
+        columnClass.setPattern(column.pattern());
+        columnClass.setHorizontal(column.horizontal());
+        columnClass.setVertical(column.vertical());
+
+        return columnClass;
+    }
+
+    static ExcelColumnClass getExcelColumn(AllFieldColumn fieldColumn, Field field) {
+        ExcelColumn column = field.getAnnotation(ExcelColumn.class);
+        if (column == null) {
+            if (fieldColumn == null) {
+                return null;
+            }
+            column = defaultColumn;
+        }
+        ExcelColumnClass columnClass = getExcelColumnClass(column);
+        if (fieldColumn != null && column == defaultColumn) {
             columnClass.setWidth(fieldColumn.width());
             columnClass.setWrapText(fieldColumn.wrapText());
             columnClass.setBackground(fieldColumn.background());
             columnClass.setPattern(fieldColumn.pattern());
             columnClass.setHorizontal(fieldColumn.horizontal());
             columnClass.setVertical(fieldColumn.vertical());
-        } else {
-            columnClass.setWidth(column.width());
-            columnClass.setWrapText(column.wrapText());
-            columnClass.setBackground(column.background());
-            columnClass.setPattern(column.pattern());
-            columnClass.setHorizontal(column.horizontal());
-            columnClass.setVertical(column.vertical());
         }
         return columnClass;
     }
@@ -104,95 +114,107 @@ class ExcelColumnClass {
         return title;
     }
 
-    public void setTitle(String title) {
+    public ExcelColumnClass setTitle(String title) {
         this.title = title;
+        return this;
     }
 
     public short getIndex() {
         return index;
     }
 
-    public void setIndex(short index) {
+    public ExcelColumnClass setIndex(short index) {
         this.index = index;
+        return this;
     }
 
     public CellType getType() {
         return type;
     }
 
-    public void setType(CellType type) {
+    public ExcelColumnClass setType(CellType type) {
         this.type = type;
+        return this;
     }
 
     public String getFormat() {
         return format;
     }
 
-    public void setFormat(String format) {
+    public ExcelColumnClass setFormat(String format) {
         this.format = format;
+        return this;
     }
 
     public int getWidth() {
         return width;
     }
 
-    public void setWidth(int width) {
+    public ExcelColumnClass setWidth(int width) {
         this.width = width;
+        return this;
     }
 
     public boolean isWrapText() {
         return wrapText;
     }
 
-    public void setWrapText(boolean wrapText) {
+    public ExcelColumnClass setWrapText(boolean wrapText) {
         this.wrapText = wrapText;
+        return this;
     }
 
     public IndexedColors getBackground() {
         return background;
     }
 
-    public void setBackground(IndexedColors background) {
+    public ExcelColumnClass setBackground(IndexedColors background) {
         this.background = background;
+        return this;
     }
 
     public IndexedColors getColor() {
         return color;
     }
 
-    public void setColor(IndexedColors color) {
+    public ExcelColumnClass setColor(IndexedColors color) {
         this.color = color;
+        return this;
     }
 
     public short getSize() {
         return size;
     }
 
-    public void setSize(short size) {
+    public ExcelColumnClass setSize(short size) {
         this.size = size;
+        return this;
     }
 
     public FillPatternType getPattern() {
         return pattern;
     }
 
-    public void setPattern(FillPatternType pattern) {
+    public ExcelColumnClass setPattern(FillPatternType pattern) {
         this.pattern = pattern;
+        return this;
     }
 
     public HorizontalAlignment getHorizontal() {
         return horizontal;
     }
 
-    public void setHorizontal(HorizontalAlignment horizontal) {
+    public ExcelColumnClass setHorizontal(HorizontalAlignment horizontal) {
         this.horizontal = horizontal;
+        return this;
     }
 
     public VerticalAlignment getVertical() {
         return vertical;
     }
 
-    public void setVertical(VerticalAlignment vertical) {
+    public ExcelColumnClass setVertical(VerticalAlignment vertical) {
         this.vertical = vertical;
+        return this;
     }
 }
