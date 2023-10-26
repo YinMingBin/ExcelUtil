@@ -34,6 +34,7 @@ public final class SheetOperate<T> {
     private short valueSize = 11;
     private float titleHeight = 25;
     private float valueHeight = 20;
+    private int columnWidth = 10;
     private final Map<Integer, BiConsumer<XSSFCellStyle, Object>> valueStyleFunMap = new HashMap<>();
     private Consumer<XSSFCellStyle> valueStyleFun = cell -> {};
     private Consumer<XSSFCellStyle> titleStyleFun = cell -> {};
@@ -106,6 +107,15 @@ public final class SheetOperate<T> {
      */
     public SheetOperate<T> setValueHeight(short valueHeight) {
         this.valueHeight = valueHeight;
+        return this;
+    }
+
+    /**
+     * 设置列宽
+     * @param columnWidth 列宽
+     */
+    public SheetOperate<T> setColumnWidth(int columnWidth) {
+        this.columnWidth = columnWidth;
         return this;
     }
 
@@ -270,7 +280,8 @@ public final class SheetOperate<T> {
                     column.settingStyle(cellStyle, dataFormat);
 
                     cellField.setCellStyle(cellStyle);
-                    cellField.setWidth(column.getWidth());
+                    int width = column.getWidth();
+                    cellField.setWidth(width > 0 ? width : getColumnWidth());
                 }
                 fieldList.add(cellField);
             }
@@ -351,5 +362,9 @@ public final class SheetOperate<T> {
 
     public float getValueHeight() {
         return valueHeight;
+    }
+
+    public int getColumnWidth() {
+        return columnWidth;
     }
 }

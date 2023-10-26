@@ -15,7 +15,7 @@ import java.lang.annotation.*;
 @Documented
 public @interface AllFieldColumn {
     /** 列宽 */
-    int width() default 10;
+    int width() default 0;
     /** 是否自动换行（默认：否） */
     boolean wrapText() default false;
     /** 背景色（默认：无背景） */

@@ -22,8 +22,8 @@ public @interface ExcelColumn {
     CellType type() default CellType.STRING;
     /** 数据格式 */
     String format() default "";
-    /** 列宽 */
-    int width() default 10;
+    /** 列宽（默认：10） */
+    int width() default 0;
     /** 是否自动换行（默认：否） */
     boolean wrapText() default false;
     /** 背景色（默认：无背景） */

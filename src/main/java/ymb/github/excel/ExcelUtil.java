@@ -100,6 +100,16 @@ public final class ExcelUtil<T> {
     }
 
     /**
+     * 设置列宽
+     * @param columnWidth 列宽
+     * @return this
+     */
+    public ExcelUtil<T> setColumnWidth(int columnWidth) {
+        sheetOperate.setColumnWidth(columnWidth);
+        return this;
+    }
+
+    /**
      * 设置表头样式
      * @param titleStyle (CellStyle) -> void
      * @return this
@@ -196,7 +206,7 @@ public final class ExcelUtil<T> {
      * @throws IOException write异常
      */
     public byte[] toByteArray() throws IOException {
-        try (XSSFWorkbook workbook = execute().workbook; ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             workbook.write(os);
             os.flush();
             return os.toByteArray();
@@ -210,7 +220,6 @@ public final class ExcelUtil<T> {
      * @throws IOException write异常
      */
     public ExcelUtil<T> write(OutputStream os) throws IOException {
-        XSSFWorkbook workbook = execute().workbook;
         workbook.write(os);
         os.flush();
         return this;
@@ -385,6 +394,7 @@ public final class ExcelUtil<T> {
         if (row == null) {
             row = sheet.createRow(rowIndex);
         }
+        float columnWidth = currentSheet.getColumnWidth();
         for (CellField field : fields) {
             XSSFCell cell = row.getCell(cellIndex);
             if (cell == null) {
@@ -392,6 +402,7 @@ public final class ExcelUtil<T> {
             }
             cell.setCellValue(field.getTitle());
             cell.setCellStyle(titleStyle);
+            float v = columnWidth > 0 ? columnWidth : field.getWidth();
             sheet.setColumnWidth(cellIndex, field.getWidth() * 256);
             List<CellField> cellFields = field.getCellFields();
             if (cellFields != null) {
