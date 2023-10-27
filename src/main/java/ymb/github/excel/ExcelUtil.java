@@ -2,7 +2,10 @@ package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.*;
+import org.apache.poi.xssf.streaming.SXSSFCell;
+import org.apache.poi.xssf.streaming.SXSSFRow;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import ymb.github.excel.annotation.ExcelClass;
 
 import java.io.*;
@@ -15,7 +18,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * @author YinMingBin
@@ -24,25 +26,25 @@ import java.util.function.Function;
 public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     private final SheetOperate<T> sheetOperate;
     private final Stack<SheetOperate<?>> otherSheet = new Stack<>();
-    private final XSSFWorkbook workbook;
+    private final SXSSFWorkbook workbook;
     private SheetOperate<?> currentSheet;
     private String csv;
 
     public ExcelUtil(Class<T> tClass) {
-        this.workbook = new XSSFWorkbook();
+        this.workbook = new SXSSFWorkbook();
         this.sheetOperate = SheetOperate.create(tClass);
         this.sheetOperate.setWorkbook(this.workbook);
         otherSheet.add(this.sheetOperate);
     }
 
     public ExcelUtil(Class<T> tClass, String sheetName) {
-        this.workbook = new XSSFWorkbook();
+        this.workbook = new SXSSFWorkbook();
         this.sheetOperate = SheetOperate.create(tClass, sheetName);
         this.sheetOperate.setWorkbook(workbook);
         otherSheet.add(this.sheetOperate);
     }
 
-    public XSSFWorkbook getWorkbook() {
+    public SXSSFWorkbook getWorkbook() {
         return workbook;
     }
 
@@ -122,7 +124,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      * @return this
      */
     @Override
-    public ExcelUtil<T> setTitleStyle(Consumer<XSSFCellStyle> titleStyle) {
+    public ExcelUtil<T> setTitleStyle(Consumer<CellStyle> titleStyle) {
         sheetOperate.setTitleStyle(titleStyle);
         return this;
     }
@@ -133,7 +135,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      * @return this
      */
     @Override
-    public ExcelUtil<T> setValueStyle(Consumer<XSSFCellStyle> valueStyle) {
+    public ExcelUtil<T> setValueStyle(Consumer<CellStyle> valueStyle) {
         sheetOperate.setValueStyle(valueStyle);
         return this;
     }
@@ -145,7 +147,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      * @return this
      */
     @Override
-    public ExcelUtil<T> operateValueStyle(int index, BiConsumer<XSSFCellStyle, Object> valueStyle) {
+    public ExcelUtil<T> operateValueStyle(int index, BiConsumer<CellStyle, Object> valueStyle) {
         sheetOperate.operateValueStyle(index, valueStyle);
         return this;
     }
@@ -156,7 +158,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      * @return this
      */
     @Override
-    public ExcelUtil<T> operateTitle(Consumer<XSSFCell> operateTitle) {
+    public ExcelUtil<T> operateTitle(Consumer<SXSSFCell> operateTitle) {
         sheetOperate.operateTitle(operateTitle);
         return this;
     }
@@ -167,7 +169,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      * @return this
      */
     @Override
-    public ExcelUtil<T> operateValue(BiConsumer<XSSFCell, Object> operateValue) {
+    public ExcelUtil<T> operateValue(BiConsumer<SXSSFCell, Object> operateValue) {
         sheetOperate.operateValue(operateValue);
         return this;
     }
@@ -178,7 +180,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      * @return this
      */
     @Override
-    public ExcelUtil<T> operateSheet(BiConsumer<XSSFSheet, List<T>> operateSheet) {
+    public ExcelUtil<T> operateSheet(BiConsumer<SXSSFSheet, List<T>> operateSheet) {
         sheetOperate.operateSheet(operateSheet);
         return this;
     }
@@ -204,6 +206,12 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     @Override
     public ExcelUtil<T> settingColumn(SFunction<T, ?> function, ExcelColumnClass columnClass) {
         sheetOperate.settingColumn(function, columnClass);
+        return this;
+    }
+
+    @Override
+    public ExcelUtil<T> autoColumnWidth() {
+        sheetOperate.autoColumnWidth();
         return this;
     }
 
@@ -381,7 +389,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
 
     private int setExcelTitle(List<CellField> fieldList) {
         Class<?> tClass = currentSheet.gettClass();
-        XSSFSheet sheet = currentSheet.getSheet();
+        SXSSFSheet sheet = currentSheet.getSheet();
         ExcelClass excelClass = tClass.getAnnotation(ExcelClass.class);
         int startRow = excelClass != null ? 1 : 0;
         int[] ints = setExcelTitle(fieldList, startRow, 0);
@@ -389,7 +397,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         mergeTitle(startRow, maxRow, fieldList);
         // 标题
         if (excelClass != null) {
-            XSSFCell cell = sheet.createRow(0).createCell(0);
+            SXSSFCell cell = sheet.createRow(0).createCell(0);
             String title = excelClass.title();
             if (title.isEmpty()) { title = excelClass.value(); }
             if (title.isEmpty()) {
@@ -398,7 +406,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             }
             cell.setCellValue(title);
             // 设置标题样式
-            XSSFCellStyle titleStyle = workbook.createCellStyle();
+            CellStyle titleStyle = workbook.createCellStyle();
             IndexedColors background = excelClass.background();
             if (!IndexedColors.AUTOMATIC.equals(background)) {
                 titleStyle.setFillForegroundColor(background.getIndex());
@@ -407,7 +415,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             titleStyle.setAlignment(excelClass.horizontal());
             titleStyle.setVerticalAlignment(excelClass.vertical());
             // 设置标题字体
-            XSSFFont font = workbook.createFont();
+            Font font = workbook.createFont();
             font.setFontHeightInPoints(excelClass.fontSize());
             titleStyle.setFont(font);
             // 设置标题边框
@@ -427,23 +435,27 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     private int[] setExcelTitle(List<CellField> fields, int rowIndex, int cellIndex) {
-        XSSFSheet sheet = currentSheet.getSheet();
-        XSSFCellStyle titleStyle = currentSheet.getTitleStyle();
-        XSSFRow row = sheet.getRow(rowIndex);
+        SXSSFSheet sheet = currentSheet.getSheet();
+        CellStyle titleStyle = currentSheet.getTitleStyle();
+        SXSSFRow row = sheet.getRow(rowIndex);
         int maxRow = rowIndex;
         if (row == null) {
             row = sheet.createRow(rowIndex);
         }
         float columnWidth = currentSheet.getColumnWidth();
         for (CellField field : fields) {
-            XSSFCell cell = row.getCell(cellIndex);
+            SXSSFCell cell = row.getCell(cellIndex);
             if (cell == null) {
                 cell = row.createCell(cellIndex);
             }
             cell.setCellValue(field.getTitle());
             cell.setCellStyle(titleStyle);
             float v = columnWidth > 0 ? columnWidth : field.getWidth();
-            sheet.setColumnWidth(cellIndex, field.getWidth() * 256);
+            if(currentSheet.isAutoColumnWidth()) {
+                sheet.autoSizeColumn(cellIndex);
+            } else {
+                sheet.setColumnWidth(cellIndex, field.getWidth() * 256);
+            }
             List<CellField> cellFields = field.getCellFields();
             if (cellFields != null) {
                 int[] area = setExcelTitle(cellFields, rowIndex + 1, cellIndex);
@@ -464,7 +476,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
 
     private void mergeTitle(int rowIndex, int maxRow, List<CellField> fields) {
         if (maxRow > rowIndex) {
-            XSSFCellStyle titleStyle = currentSheet.getTitleStyle();
+            CellStyle titleStyle = currentSheet.getTitleStyle();
             for (CellField field : fields) {
                 List<CellField> cellFields = field.getCellFields();
                 if (cellFields == null) {
@@ -477,12 +489,12 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         }
     }
 
-    private void mergeRegion(int startRow, int endRow, int startCell, int endCell, XSSFCellStyle style) {
-        XSSFSheet sheet = currentSheet.getSheet();
+    private void mergeRegion(int startRow, int endRow, int startCell, int endCell, CellStyle style) {
+        SXSSFSheet sheet = currentSheet.getSheet();
         for (int i = startRow; i <= endRow; i++) {
-            XSSFRow row = sheet.getRow(i);
+            SXSSFRow row = sheet.getRow(i);
             for (int j = startCell; j <= endCell; j++) {
-                XSSFCell cell = row.getCell(j);
+                SXSSFCell cell = row.getCell(j);
                 if (cell == null) {
                     cell = row.createCell(j);
                 }
@@ -496,12 +508,12 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         if (dataList == null || dataList.isEmpty()) {
             return rowIndex;
         }
-        XSSFSheet sheet = currentSheet.getSheet();
+        SXSSFSheet sheet = currentSheet.getSheet();
         float valueHeight = currentSheet.getValueHeight();
         // 设置数据
         for (R data : dataList) {
             int rowIndexCopy = rowIndex;
-            XSSFRow row = sheet.getRow(rowIndex);
+            SXSSFRow row = sheet.getRow(rowIndex);
             if (row == null) {
                 row = sheet.createRow(rowIndex);
             }
@@ -513,7 +525,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     rowIndex = Math.max(rowIndex, rowI);
                 } else {
                     int cellIndex = cellField.getIndex();
-                    XSSFCell cell = row.getCell(cellIndex);
+                    SXSSFCell cell = row.getCell(cellIndex);
                     if (cell == null) {
                         cell = row.createCell(cellIndex);
                     }
@@ -522,6 +534,12 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     CellType cellType = cellField.getCellType();
                     cell.setCellType(cellType);
                     setValue(cell, value, cellType);
+                    if (currentSheet.isAutoColumnWidth()) {
+                        int oldColumnWidth = sheet.getColumnWidth(cellIndex);
+                        sheet.autoSizeColumn(cellIndex);
+                        int newColumnWidth = sheet.getColumnWidth(cellIndex);
+                        sheet.setColumnWidth(cellIndex, Math.max(oldColumnWidth, newColumnWidth));
+                    }
                     currentSheet.operateValue(cell, data);
                 }
             }
@@ -537,7 +555,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         return rowIndex - 1;
     }
 
-    private void setValue(XSSFCell cell, Object value, CellType cellType) {
+    private void setValue(SXSSFCell cell, Object value, CellType cellType) {
         if (value != null) {
             if (value instanceof LocalDate) {
                 cell.setCellValue((LocalDate) value);

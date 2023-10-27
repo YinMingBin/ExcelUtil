@@ -1,9 +1,6 @@
 package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFDataFormat;
-import org.apache.poi.xssf.usermodel.XSSFFont;
 import ymb.github.excel.annotation.AllFieldColumn;
 import ymb.github.excel.annotation.ExcelColumn;
 
@@ -84,7 +81,7 @@ public class ExcelColumnClass {
         return columnClass;
     }
 
-    void settingStyle(XSSFCellStyle cellStyle, XSSFDataFormat dataFormat) {
+    void settingStyle(CellStyle cellStyle, DataFormat dataFormat, Font font) {
         // 格式
         String format = this.getFormat();
         if (!format.isEmpty()) {
@@ -97,7 +94,6 @@ public class ExcelColumnClass {
             cellStyle.setFillPattern(this.getPattern());
         }
         // 字体
-        XSSFFont font = cellStyle.getFont();
         font.setColor(this.getColor().getIndex());
         short size = this.getSize();
         if (size > 0) {

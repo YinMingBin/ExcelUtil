@@ -1,13 +1,12 @@
 package ymb.github.excel;
 
-import org.apache.poi.xssf.usermodel.XSSFCell;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.xssf.streaming.SXSSFCell;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
 
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * @author WuLiao
@@ -64,14 +63,14 @@ public interface Operate<T, R> {
      * @param titleStyleFun (CellStyle) -> void
      * @return this
      */
-    R setTitleStyle(Consumer<XSSFCellStyle> titleStyleFun);
+    R setTitleStyle(Consumer<CellStyle> titleStyleFun);
 
     /**
      * 设置数据样式
      * @param valueStyleFun (CellStyle) -> void
      * @return this
      */
-    R setValueStyle(Consumer<XSSFCellStyle> valueStyleFun);
+    R setValueStyle(Consumer<CellStyle> valueStyleFun);
 
     /**
      * 操作某一列数据的样式 (设置Cell时调用)
@@ -79,28 +78,28 @@ public interface Operate<T, R> {
      * @param valueStyle (CellStyle, value) -> void
      * @return this
      */
-    R operateValueStyle(int index, BiConsumer<XSSFCellStyle, Object> valueStyle);
+    R operateValueStyle(int index, BiConsumer<CellStyle, Object> valueStyle);
 
     /**
      * 操作表头，每次设置表头之后执行
      * @param operateTitle (Cell) -> void
      * @return this
      */
-    R operateTitle(Consumer<XSSFCell> operateTitle);
+    R operateTitle(Consumer<SXSSFCell> operateTitle);
 
     /**
      * 操作数据，每次设置数据之后执行
      * @param operateValue (Cell, data) -> void
      * @return this
      */
-    R operateValue(BiConsumer<XSSFCell, Object> operateValue);
+    R operateValue(BiConsumer<SXSSFCell, Object> operateValue);
 
     /**
      * 操作Sheet，在数据生成完之后执行
      * @param operateSheet (Sheet, dataList) -> void
      * @return this
      */
-    R operateSheet(BiConsumer<XSSFSheet, List<T>> operateSheet);
+    R operateSheet(BiConsumer<SXSSFSheet, List<T>> operateSheet);
 
     /**
      * 设置列
@@ -116,4 +115,10 @@ public interface Operate<T, R> {
      * @return this
      */
     R settingColumn(SFunction<T, ?> function, ExcelColumnClass columnClass);
+
+    /**
+     * 启用自适应列宽
+     * @return this
+     */
+    R autoColumnWidth();
 }

@@ -1,7 +1,7 @@
 package ymb.github.excel;
 
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 
 import java.util.List;
 import java.util.function.Function;
@@ -13,7 +13,7 @@ class CellField {
     private int index;
     private String title;
     private CellType cellType;
-    private XSSFCellStyle cellStyle;
+    private CellStyle cellStyle;
     private Function<Object, Object> valueFun;
     private List<CellField> cellFields;
     private int width;
@@ -45,11 +45,11 @@ class CellField {
         this.cellType = cellType;
     }
 
-    public XSSFCellStyle getCellStyle() {
+    public CellStyle getCellStyle() {
         return cellStyle;
     }
 
-    public void setCellStyle(XSSFCellStyle cellStyle) {
+    public void setCellStyle(CellStyle cellStyle) {
         this.cellStyle = cellStyle;
     }
 

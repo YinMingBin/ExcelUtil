@@ -1,10 +1,9 @@
 package ymb.github.excel;
 
-import org.apache.poi.ss.usermodel.BorderStyle;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.VerticalAlignment;
-import org.apache.poi.xssf.usermodel.*;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.streaming.SXSSFCell;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import ymb.github.excel.annotation.AllFieldColumn;
 
 import java.lang.invoke.SerializedLambda;
@@ -23,13 +22,13 @@ import java.util.stream.Collectors;
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
-    private XSSFWorkbook workbook;
-    private XSSFSheet sheet;
+    private SXSSFWorkbook workbook;
+    private SXSSFSheet sheet;
     private String sheetName;
     private List<T> data;
-    private Consumer<XSSFCell> operateTitle;
-    private BiConsumer<XSSFCell, Object> operateValue;
-    private BiConsumer<XSSFSheet, List<T>> operateSheet;
+    private Consumer<SXSSFCell> operateTitle;
+    private BiConsumer<SXSSFCell, Object> operateValue;
+    private BiConsumer<SXSSFSheet, List<T>> operateSheet;
     private List<CellField> fields;
     private final Class<T> tClass;
     private short titleSize = 12;
@@ -37,9 +36,10 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private float titleHeight = 25;
     private float valueHeight = 20;
     private int columnWidth = 10;
-    private final Map<Integer, BiConsumer<XSSFCellStyle, Object>> valueStyleFunMap = new HashMap<>();
-    private Consumer<XSSFCellStyle> valueStyleFun = cell -> {};
-    private Consumer<XSSFCellStyle> titleStyleFun = cell -> {};
+    private final Map<Integer, BiConsumer<CellStyle, Object>> valueStyleFunMap = new HashMap<>();
+    private Consumer<CellStyle> valueStyleFun = cell -> {};
+    private Consumer<CellStyle> titleStyleFun = cell -> {};
+    private boolean autoColumnWidth = false;
 
     private SheetOperate(Class<T> tClass) {
         this.tClass = tClass;
@@ -58,7 +58,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         return new SheetOperate<>(tClass, sheetName);
     }
 
-    void setWorkbook(XSSFWorkbook workbook) {
+    void setWorkbook(SXSSFWorkbook workbook) {
         this.workbook = workbook;
     }
 
@@ -134,7 +134,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      * @return this
      */
     @Override
-    public SheetOperate<T> setTitleStyle(Consumer<XSSFCellStyle> titleStyleFun) {
+    public SheetOperate<T> setTitleStyle(Consumer<CellStyle> titleStyleFun) {
         this.titleStyleFun = titleStyleFun;
         return this;
     }
@@ -145,7 +145,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      * @return this
      */
     @Override
-    public SheetOperate<T> setValueStyle(Consumer<XSSFCellStyle> valueStyleFun) {
+    public SheetOperate<T> setValueStyle(Consumer<CellStyle> valueStyleFun) {
         this.valueStyleFun = valueStyleFun;
         return this;
     }
@@ -157,7 +157,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      * @return this
      */
     @Override
-    public SheetOperate<T> operateValueStyle(int index, BiConsumer<XSSFCellStyle, Object> valueStyle) {
+    public SheetOperate<T> operateValueStyle(int index, BiConsumer<CellStyle, Object> valueStyle) {
         valueStyleFunMap.put(index, valueStyle);
         return this;
     }
@@ -168,7 +168,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      * @return this
      */
     @Override
-    public SheetOperate<T> operateTitle(Consumer<XSSFCell> operateTitle) {
+    public SheetOperate<T> operateTitle(Consumer<SXSSFCell> operateTitle) {
         this.operateTitle = operateTitle;
         return this;
     }
@@ -179,7 +179,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      * @return this
      */
     @Override
-    public SheetOperate<T> operateValue(BiConsumer<XSSFCell, Object> operateValue) {
+    public SheetOperate<T> operateValue(BiConsumer<SXSSFCell, Object> operateValue) {
         this.operateValue = operateValue;
         return this;
     }
@@ -190,7 +190,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      * @return this
      */
     @Override
-    public SheetOperate<T> operateSheet(BiConsumer<XSSFSheet, List<T>> operateSheet) {
+    public SheetOperate<T> operateSheet(BiConsumer<SXSSFSheet, List<T>> operateSheet) {
         this.operateSheet = operateSheet;
         return this;
     }
@@ -205,7 +205,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     public final SheetOperate<T> settingColumn(SFunction<T, Object>... functions) {
         for (SFunction<T, ?> function : functions) {
             if (function != null) {
-                settingColumn(function, ExcelColumnClass.build());
+                settingColumn(function, null);
             }
         }
         return this;
@@ -219,7 +219,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      */
     @Override
     public SheetOperate<T> settingColumn(SFunction<T, ?> function, ExcelColumnClass columnClass) {
-        if (function == null || columnClass == null) {
+        if (function == null) {
             return this;
         }
 
@@ -229,6 +229,13 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
                 Field field = gettClass().getDeclaredField(fieldName);
                 if (this.fields == null) {
                     this.fields = new ArrayList<>();
+                }
+                if (columnClass == null) {
+                    AllFieldColumn fieldColumn = tClass.getAnnotation(AllFieldColumn.class);
+                    columnClass = ExcelColumnClass.getExcelColumn(fieldColumn, field);
+                    if (columnClass == null) {
+                        columnClass = ExcelColumnClass.build();
+                    }
                 }
                 this.fields.add(getCellField(gettClass(), field, columnClass));
                 sortFields(this.fields);
@@ -242,7 +249,13 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         return this;
     }
 
-    XSSFSheet getSheet() {
+    @Override
+    public SheetOperate<T> autoColumnWidth() {
+        this.autoColumnWidth = true;
+        return this;
+    }
+
+    SXSSFSheet getSheet() {
         if (sheet == null) {
             sheet = sheetName == null ? workbook.createSheet() : workbook.createSheet(sheetName);
             sheetName = sheet.getSheetName();
@@ -254,10 +267,10 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         this.sheet = null;
     }
 
-    XSSFCellStyle getValueStyle() {
-        XSSFCellStyle cellStyle = workbook.createCellStyle();
+    CellStyle getValueStyle() {
+        CellStyle cellStyle = workbook.createCellStyle();
         // 设置字体
-        XSSFFont font = workbook.createFont();
+        Font font = workbook.createFont();
         font.setFontHeightInPoints(getValueSize());
         cellStyle.setFont(font);
         // 设置边框
@@ -274,12 +287,12 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         return cellStyle;
     }
 
-    XSSFCellStyle getTitleStyle() {
-        XSSFCellStyle cellStyle = workbook.createCellStyle();
+    CellStyle getTitleStyle() {
+        CellStyle cellStyle = workbook.createCellStyle();
         cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
         // 设置字体
-        XSSFFont font = workbook.createFont();
+        Font font = workbook.createFont();
         font.setFontHeightInPoints(getTitleSize());
         cellStyle.setFont(font);
         // 设置边框
@@ -344,9 +357,9 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
             cellField.setCellFields(getFields(fieldType));
         } else {
             cellField.setCellType(column.getType());
-            XSSFCellStyle cellStyle = getValueStyle();
-
-            column.settingStyle(cellStyle, workbook.createDataFormat());
+            CellStyle cellStyle = getValueStyle();
+            Font font = workbook.getFontAt(cellStyle.getFontIndex());
+            column.settingStyle(cellStyle, workbook.createDataFormat(), font);
 
             cellField.setCellStyle(cellStyle);
             int width = column.getWidth();
@@ -376,24 +389,24 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         }
     }
 
-    void operateValue(XSSFCell cell, Object data) {
+    void operateValue(SXSSFCell cell, Object data) {
         if (operateValue != null) {
             operateValue.accept(cell, data);
         }
     }
 
-    void operateTitle(XSSFCell cell) {
+    void operateTitle(SXSSFCell cell) {
         if (operateTitle != null) {
             operateTitle.accept(cell);
         }
     }
 
-    XSSFCellStyle operateValueStyle(CellField cellField, Object value) {
+    CellStyle operateValueStyle(CellField cellField, Object value) {
         int index = cellField.getIndex();
-        XSSFCellStyle cellStyle = cellField.getCellStyle();
-        BiConsumer<XSSFCellStyle, Object> cellStyleFun = valueStyleFunMap.get(index);
+        CellStyle cellStyle = cellField.getCellStyle();
+        BiConsumer<CellStyle, Object> cellStyleFun = valueStyleFunMap.get(index);
         if (cellStyleFun != null) {
-            XSSFCellStyle newCellStyle = workbook.createCellStyle();
+            CellStyle newCellStyle = workbook.createCellStyle();
             newCellStyle.cloneStyleFrom(cellStyle);
             cellStyleFun.accept(newCellStyle, value);
             cellStyle = newCellStyle;
@@ -447,5 +460,9 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     public int getColumnWidth() {
         return columnWidth;
+    }
+
+    public boolean isAutoColumnWidth() {
+        return autoColumnWidth;
     }
 }
