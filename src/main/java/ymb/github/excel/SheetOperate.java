@@ -430,10 +430,6 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         return fieldName;
     }
 
-    public String getSheetName() {
-        return sheetName;
-    }
-
     public List<T> getData() {
         return data;
     }

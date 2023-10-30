@@ -241,6 +241,9 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                 continue;
             }
             this.currentSheet = operate;
+            if (operate.isAutoColumnWidth()) {
+                operate.getSheet().trackAllColumnsForAutoSizing();
+            }
             int maxRow = setExcelTitle(fields);
             setExcelData(operate.getData(), fields, maxRow + 1);
             operate.operateSheet();
@@ -442,7 +445,6 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         if (row == null) {
             row = sheet.createRow(rowIndex);
         }
-        float columnWidth = currentSheet.getColumnWidth();
         for (CellField field : fields) {
             SXSSFCell cell = row.getCell(cellIndex);
             if (cell == null) {
@@ -450,12 +452,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             }
             cell.setCellValue(field.getTitle());
             cell.setCellStyle(titleStyle);
-            float v = columnWidth > 0 ? columnWidth : field.getWidth();
-            if(currentSheet.isAutoColumnWidth()) {
-                sheet.autoSizeColumn(cellIndex);
-            } else {
-                sheet.setColumnWidth(cellIndex, field.getWidth() * 256);
-            }
+            setColumnWidth(cell, field.getWidth() * 256);
             List<CellField> cellFields = field.getCellFields();
             if (cellFields != null) {
                 int[] area = setExcelTitle(cellFields, rowIndex + 1, cellIndex);
@@ -534,12 +531,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     CellType cellType = cellField.getCellType();
                     cell.setCellType(cellType);
                     setValue(cell, value, cellType);
-                    if (currentSheet.isAutoColumnWidth()) {
-                        int oldColumnWidth = sheet.getColumnWidth(cellIndex);
-                        sheet.autoSizeColumn(cellIndex);
-                        int newColumnWidth = sheet.getColumnWidth(cellIndex);
-                        sheet.setColumnWidth(cellIndex, Math.max(oldColumnWidth, newColumnWidth));
-                    }
+                    setColumnWidth(cell, 0);
                     currentSheet.operateValue(cell, data);
                 }
             }
@@ -553,6 +545,22 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             rowIndex++;
         }
         return rowIndex - 1;
+    }
+
+    public void setColumnWidth(SXSSFCell cell, int columnWidth) {
+
+        int cellIndex = cell.getColumnIndex();
+        SXSSFSheet sheet = currentSheet.getSheet();
+        if (currentSheet.isAutoColumnWidth()) {
+            int oldColumnWidth = sheet.getColumnWidth(cellIndex);
+            String valStr = cell.toString();
+            short fontSize = workbook.getFontAt(cell.getCellStyle().getFontIndex()).getFontHeightInPoints();
+            sheet.autoSizeColumn(cellIndex);
+            int newColumnWidth = sheet.getColumnWidth(cellIndex) + ((valStr.getBytes().length - valStr.length()) * 9 * fontSize);
+            sheet.setColumnWidth(cellIndex, Math.max(oldColumnWidth, newColumnWidth));
+        } else if (columnWidth > 0){
+            sheet.setColumnWidth(cellIndex, columnWidth);
+        }
     }
 
     private void setValue(SXSSFCell cell, Object value, CellType cellType) {
