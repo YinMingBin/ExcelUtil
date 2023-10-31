@@ -29,6 +29,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     private final SXSSFWorkbook workbook;
     private SheetOperate<?> currentSheet;
     private String csv;
+    private final Map<Integer, Integer> maxWidthMap = new HashMap<>();
 
     public ExcelUtil(Class<T> tClass) {
         this.workbook = new SXSSFWorkbook();
@@ -235,14 +236,15 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             workbook.removeSheetAt(i);
         }
         for (SheetOperate<?> operate : otherSheet) {
+            this.currentSheet = operate;
             operate.clearSheet();
             List<CellField> fields = operate.getFields();
             if (fields.isEmpty()) {
                 continue;
             }
-            this.currentSheet = operate;
             if (operate.isAutoColumnWidth()) {
                 operate.getSheet().trackAllColumnsForAutoSizing();
+                maxWidthMap.clear();
             }
             int maxRow = setExcelTitle(fields);
             setExcelData(operate.getData(), fields, maxRow + 1);
@@ -548,17 +550,23 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     public void setColumnWidth(SXSSFCell cell, int columnWidth) {
-
-        int cellIndex = cell.getColumnIndex();
-        SXSSFSheet sheet = currentSheet.getSheet();
         if (currentSheet.isAutoColumnWidth()) {
-            int oldColumnWidth = sheet.getColumnWidth(cellIndex);
+            int cellIndex = cell.getColumnIndex();
+            SXSSFSheet sheet = currentSheet.getSheet();
             String valStr = cell.toString();
+            int length = valStr.getBytes().length;
+            if (length < maxWidthMap.computeIfAbsent(cellIndex, key -> length)) {
+                return;
+            }
+            int oldColumnWidth = sheet.getColumnWidth(cellIndex);
             short fontSize = workbook.getFontAt(cell.getCellStyle().getFontIndex()).getFontHeightInPoints();
             sheet.autoSizeColumn(cellIndex);
-            int newColumnWidth = sheet.getColumnWidth(cellIndex) + ((valStr.getBytes().length - valStr.length()) * 9 * fontSize);
+            int newColumnWidth = sheet.getColumnWidth(cellIndex) + ((length - valStr.length()) * 9 * fontSize);
             sheet.setColumnWidth(cellIndex, Math.max(oldColumnWidth, newColumnWidth));
+            maxWidthMap.put(cellIndex, length);
         } else if (columnWidth > 0){
+            int cellIndex = cell.getColumnIndex();
+            SXSSFSheet sheet = currentSheet.getSheet();
             sheet.setColumnWidth(cellIndex, columnWidth);
         }
     }
