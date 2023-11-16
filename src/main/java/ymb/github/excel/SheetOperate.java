@@ -368,7 +368,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         return cellField;
     }
 
-    private void sortFields(List<CellField> fieldList) {
+    static void sortFields(List<CellField> fieldList) {
         Set<Integer> indexSet = fieldList.stream().map(CellField::getIndex)
                 .filter(index -> index > -1).collect(Collectors.toSet());
         int index = 0;

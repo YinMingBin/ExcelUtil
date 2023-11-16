@@ -4,6 +4,7 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
@@ -13,8 +14,10 @@ class CellField {
     private int index;
     private String title;
     private CellType cellType;
+    private Class<?> fieldType;
     private CellStyle cellStyle;
     private Function<Object, Object> valueFun;
+    private BiConsumer<Object, Object> settingFun;
     private List<CellField> cellFields;
     private int width;
 
@@ -45,6 +48,14 @@ class CellField {
         this.cellType = cellType;
     }
 
+    public Class<?> getFieldType() {
+        return fieldType;
+    }
+
+    public void setFieldType(Class<?> fieldType) {
+        this.fieldType = fieldType;
+    }
+
     public CellStyle getCellStyle() {
         return cellStyle;
     }
@@ -59,6 +70,14 @@ class CellField {
 
     public void setValueFun(Function<Object, Object> valueFun) {
         this.valueFun = valueFun;
+    }
+
+    public BiConsumer<Object, Object> getSettingFun() {
+        return settingFun;
+    }
+
+    public void setSettingFun(BiConsumer<Object, Object> settingFun) {
+        this.settingFun = settingFun;
     }
 
     public List<CellField> getCellFields() {
