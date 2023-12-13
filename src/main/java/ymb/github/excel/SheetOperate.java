@@ -406,8 +406,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         CellStyle cellStyle = cellField.getCellStyle();
         BiConsumer<CellStyle, Object> cellStyleFun = valueStyleFunMap.get(index);
         if (cellStyleFun != null) {
-            CellStyle newCellStyle = workbook.createCellStyle();
-            newCellStyle.cloneStyleFrom(cellStyle);
+            CellStyle newCellStyle = this.getValueStyle();
             cellStyleFun.accept(newCellStyle, value);
             cellStyle = newCellStyle;
         }

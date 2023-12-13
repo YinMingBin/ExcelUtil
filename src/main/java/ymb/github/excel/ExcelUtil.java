@@ -143,13 +143,13 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
 
     /**
      * 操作某一列数据的样式 (设置Cell时调用)
-     * @param index 列索引
-     * @param valueStyle (CellStyle, value) -> void
+     * @param columnIndex 列索引
+     * @param valueStyle (CellStyle, rowData) -> void
      * @return this
      */
     @Override
-    public ExcelUtil<T> operateValueStyle(int index, BiConsumer<CellStyle, Object> valueStyle) {
-        sheetOperate.operateValueStyle(index, valueStyle);
+    public ExcelUtil<T> operateValueStyle(int columnIndex, BiConsumer<CellStyle, Object> valueStyle) {
+        sheetOperate.operateValueStyle(columnIndex, valueStyle);
         return this;
     }
 
@@ -166,7 +166,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
 
     /**
      * 操作数据，每次设置数据之后执行
-     * @param operateValue (Cell, data) -> void
+     * @param operateValue (Cell, rowData) -> void
      * @return this
      */
     @Override
@@ -528,7 +528,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     if (cell == null) {
                         cell = row.createCell(cellIndex);
                     }
-                    cell.setCellStyle(currentSheet.operateValueStyle(cellField, value));
+                    cell.setCellStyle(currentSheet.operateValueStyle(cellField, data));
                     cellField.setCellStyle(cell.getCellStyle());
                     CellType cellType = cellField.getCellType();
                     cell.setCellType(cellType);
