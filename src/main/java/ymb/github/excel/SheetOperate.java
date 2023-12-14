@@ -2,6 +2,7 @@ package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFCell;
+import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import ymb.github.excel.annotation.AllFieldColumn;
@@ -28,6 +29,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private List<T> data;
     private Consumer<SXSSFCell> operateTitle;
     private BiConsumer<SXSSFCell, Object> operateValue;
+    private BiConsumer<SXSSFRow, Object> operateRow;
     private BiConsumer<SXSSFSheet, List<T>> operateSheet;
     private List<CellField> fields;
     private final Class<T> tClass;
@@ -153,7 +155,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     /**
      * 操作某一列数据的样式 (设置Cell时调用)
      * @param index 列索引
-     * @param valueStyle (CellStyle, value) -> void
+     * @param valueStyle (CellStyle, rowData) -> void
      * @return this
      */
     @Override
@@ -175,12 +177,23 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     /**
      * 操作数据，每次设置数据之后执行
-     * @param operateValue (Cell, data) -> void
+     * @param operateValue (Cell, RowData) -> void
      * @return this
      */
     @Override
     public SheetOperate<T> operateValue(BiConsumer<SXSSFCell, Object> operateValue) {
         this.operateValue = operateValue;
+        return this;
+    }
+
+    /**
+     * 操作数据，每次设置完一行数据之后执行
+     * @param operateRow (Row, RowData) -> void
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> operateRow(BiConsumer<SXSSFRow, Object> operateRow) {
+        this.operateRow = operateRow;
         return this;
     }
 
@@ -386,6 +399,12 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     void operateSheet() {
         if (operateSheet != null) {
             operateSheet.accept(getSheet(), getData());
+        }
+    }
+
+    void operateRow(SXSSFRow row, Object data) {
+        if (operateRow != null) {
+            operateRow.accept(row, data);
         }
     }
 

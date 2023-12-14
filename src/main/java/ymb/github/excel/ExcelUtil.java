@@ -176,6 +176,17 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
+     * 操作数据，每次设置完一行数据之后执行
+     * @param operateRow (Row, rowData) -> void
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> operateRow(BiConsumer<SXSSFRow, Object> operateRow) {
+        sheetOperate.operateRow(operateRow);
+        return this;
+    }
+
+    /**
      * 操作Sheet，在数据生成完之后执行
      * @param operateSheet (Sheet, dataList) -> void
      * @return this
@@ -544,6 +555,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     mergeRegion(rowIndexCopy, rowIndex, columnIndex, columnIndex, cellField.getCellStyle());
                 }
             }
+            currentSheet.operateRow(row, data);
             rowIndex++;
         }
         return rowIndex - 1;

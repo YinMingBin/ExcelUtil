@@ -2,6 +2,7 @@ package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.xssf.streaming.SXSSFCell;
+import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 
 import java.util.List;
@@ -89,10 +90,17 @@ public interface Operate<T, R> {
 
     /**
      * 操作数据，每次设置数据之后执行
-     * @param operateValue (Cell, data) -> void
+     * @param operateValue (Cell, RowData) -> void
      * @return this
      */
     R operateValue(BiConsumer<SXSSFCell, Object> operateValue);
+
+    /**
+     * 操作数据，每次设置完一行数据之后执行
+     * @param operateRow (Row, RowData) -> void
+     * @return this
+     */
+    R operateRow(BiConsumer<SXSSFRow, Object> operateRow);
 
     /**
      * 操作Sheet，在数据生成完之后执行
