@@ -38,8 +38,8 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private float titleHeight = 25;
     private float valueHeight = 20;
     private int columnWidth = 10;
-    private final Map<Integer, BiConsumer<CellStyle, Object>> valueStyleFunMap = new HashMap<>();
-    private Consumer<CellStyle> valueStyleFun = cell -> {};
+    private final Map<Integer, BiConsumer<CellStyle, Object>> cellStyleFunMap = new HashMap<>();
+    private Consumer<CellStyle> cellStyleFun = cell -> {};
     private Consumer<CellStyle> titleStyleFun = cell -> {};
     private boolean autoColumnWidth = false;
 
@@ -142,25 +142,25 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     }
 
     /**
-     * 设置数据样式
-     * @param valueStyleFun (CellStyle) -> void
+     * 设置Cell样式
+     * @param cellStyleFun (CellStyle) -> void
      * @return this
      */
     @Override
-    public SheetOperate<T> setValueStyle(Consumer<CellStyle> valueStyleFun) {
-        this.valueStyleFun = valueStyleFun;
+    public SheetOperate<T> setCellStyle(Consumer<CellStyle> cellStyleFun) {
+        this.cellStyleFun = cellStyleFun;
         return this;
     }
 
     /**
      * 操作某一列数据的样式 (设置Cell时调用)
      * @param index 列索引
-     * @param valueStyle (CellStyle, rowData) -> void
+     * @param cellStyle (CellStyle, rowData) -> void
      * @return this
      */
     @Override
-    public SheetOperate<T> operateValueStyle(int index, BiConsumer<CellStyle, Object> valueStyle) {
-        valueStyleFunMap.put(index, valueStyle);
+    public SheetOperate<T> operateCellStyle(int index, BiConsumer<CellStyle, Object> cellStyle) {
+        cellStyleFunMap.put(index, cellStyle);
         return this;
     }
 
@@ -280,7 +280,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         this.sheet = null;
     }
 
-    CellStyle getValueStyle() {
+    CellStyle getCellStyle() {
         CellStyle cellStyle = workbook.createCellStyle();
         // 设置字体
         Font font = workbook.createFont();
@@ -296,7 +296,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         cellStyle.setBorderRight(BorderStyle.THIN);
         cellStyle.setRightBorderColor(IndexedColors.BLACK.getIndex());
 
-        valueStyleFun.accept(cellStyle);
+        cellStyleFun.accept(cellStyle);
         return cellStyle;
     }
 
@@ -370,7 +370,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
             cellField.setCellFields(getFields(fieldType));
         } else {
             cellField.setCellType(column.getType());
-            CellStyle cellStyle = getValueStyle();
+            CellStyle cellStyle = getCellStyle();
             Font font = workbook.getFontAt(cellStyle.getFontIndex());
             column.settingStyle(cellStyle, workbook.createDataFormat(), font);
 
@@ -420,12 +420,12 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         }
     }
 
-    CellStyle operateValueStyle(CellField cellField, Object value) {
+    CellStyle operateCellStyle(CellField cellField, Object value) {
         int index = cellField.getIndex();
         CellStyle cellStyle = cellField.getCellStyle();
-        BiConsumer<CellStyle, Object> cellStyleFun = valueStyleFunMap.get(index);
+        BiConsumer<CellStyle, Object> cellStyleFun = cellStyleFunMap.get(index);
         if (cellStyleFun != null) {
-            CellStyle newCellStyle = this.getValueStyle();
+            CellStyle newCellStyle = this.getCellStyle();
             cellStyleFun.accept(newCellStyle, value);
             cellStyle = newCellStyle;
         }

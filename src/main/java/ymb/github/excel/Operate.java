@@ -68,18 +68,18 @@ public interface Operate<T, R> {
 
     /**
      * 设置数据样式
-     * @param valueStyleFun (CellStyle) -> void
+     * @param cellStyleFun (CellStyle) -> void
      * @return this
      */
-    R setValueStyle(Consumer<CellStyle> valueStyleFun);
+    R setCellStyle(Consumer<CellStyle> cellStyleFun);
 
     /**
      * 操作某一列数据的样式 (设置Cell时调用)
      * @param index 列索引
-     * @param valueStyle (CellStyle, value) -> void
+     * @param cellStyle (CellStyle, value) -> void
      * @return this
      */
-    R operateValueStyle(int index, BiConsumer<CellStyle, Object> valueStyle);
+    R operateCellStyle(int index, BiConsumer<CellStyle, Object> cellStyle);
 
     /**
      * 操作表头，每次设置表头之后执行
