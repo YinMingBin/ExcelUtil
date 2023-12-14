@@ -32,11 +32,11 @@ public interface Operate<T, R> {
     R setTitleSize(short titleSize);
 
     /**
-     * 设置数据的字体大小
-     * @param valueSize 字体大小
+     * 设置单元格（Cell）的字体大小
+     * @param fontSize 字体大小
      * @return this
      */
-    R setValueSize(short valueSize);
+    R setFontSize(short fontSize);
 
     /**
      * 设置表头的行高
@@ -46,11 +46,11 @@ public interface Operate<T, R> {
     R setTitleHeight(short titleHeight);
 
     /**
-     * 设置数据的行高
-     * @param valueHeight 行高
+     * 设置（Row）行高
+     * @param rowHeight 行高
      * @return this
      */
-    R setValueHeight(short valueHeight);
+    R setRowHeight(short rowHeight);
 
     /**
      * 设置列宽
@@ -67,16 +67,16 @@ public interface Operate<T, R> {
     R setTitleStyle(Consumer<CellStyle> titleStyleFun);
 
     /**
-     * 设置数据样式
+     * 设置单元格（Cell）样式
      * @param cellStyleFun (CellStyle) -> void
      * @return this
      */
     R setCellStyle(Consumer<CellStyle> cellStyleFun);
 
     /**
-     * 操作某一列数据的样式 (设置Cell时调用)
+     * 操作某一列单元格（Cell）的样式 (设置Cell时调用)
      * @param index 列索引
-     * @param cellStyle (CellStyle, value) -> void
+     * @param cellStyle (CellStyle, RowData) -> void
      * @return this
      */
     R operateCellStyle(int index, BiConsumer<CellStyle, Object> cellStyle);
@@ -89,14 +89,14 @@ public interface Operate<T, R> {
     R operateTitle(Consumer<SXSSFCell> operateTitle);
 
     /**
-     * 操作数据，每次设置数据之后执行
-     * @param operateValue (Cell, RowData) -> void
+     * 操作单元格（Cell），每次设置数据之后执行
+     * @param operateCell (Cell, RowData) -> void
      * @return this
      */
-    R operateValue(BiConsumer<SXSSFCell, Object> operateValue);
+    R operateCell(BiConsumer<SXSSFCell, Object> operateCell);
 
     /**
-     * 操作数据，每次设置完一行数据之后执行
+     * 操作Row，每次设置完一行数据之后执行
      * @param operateRow (Row, RowData) -> void
      * @return this
      */

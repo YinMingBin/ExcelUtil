@@ -28,15 +28,15 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private String sheetName;
     private List<T> data;
     private Consumer<SXSSFCell> operateTitle;
-    private BiConsumer<SXSSFCell, Object> operateValue;
+    private BiConsumer<SXSSFCell, Object> operateCell;
     private BiConsumer<SXSSFRow, Object> operateRow;
     private BiConsumer<SXSSFSheet, List<T>> operateSheet;
     private List<CellField> fields;
     private final Class<T> tClass;
     private short titleSize = 12;
-    private short valueSize = 11;
+    private short fontSize = 11;
     private float titleHeight = 25;
-    private float valueHeight = 20;
+    private float rowHeight = 20;
     private int columnWidth = 10;
     private final Map<Integer, BiConsumer<CellStyle, Object>> cellStyleFunMap = new HashMap<>();
     private Consumer<CellStyle> cellStyleFun = cell -> {};
@@ -87,13 +87,13 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     }
 
     /**
-     * 设置数据的字体大小
-     * @param valueSize 字体大小
+     * 设置Cell的字体大小
+     * @param fontSize 字体大小
      * @return this
      */
     @Override
-    public SheetOperate<T> setValueSize(short valueSize) {
-        this.valueSize = valueSize;
+    public SheetOperate<T> setFontSize(short fontSize) {
+        this.fontSize = fontSize;
         return this;
     }
 
@@ -109,13 +109,13 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     }
 
     /**
-     * 设置数据的行高
-     * @param valueHeight 行高
+     * 设置(Row)行高
+     * @param rowHeight 行高
      * @return this
      */
     @Override
-    public SheetOperate<T> setValueHeight(short valueHeight) {
-        this.valueHeight = valueHeight;
+    public SheetOperate<T> setRowHeight(short rowHeight) {
+        this.rowHeight = rowHeight;
         return this;
     }
 
@@ -153,7 +153,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     }
 
     /**
-     * 操作某一列数据的样式 (设置Cell时调用)
+     * 操作某一列单元格（Cell）的样式 (设置Cell时调用)
      * @param index 列索引
      * @param cellStyle (CellStyle, rowData) -> void
      * @return this
@@ -176,18 +176,18 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     }
 
     /**
-     * 操作数据，每次设置数据之后执行
-     * @param operateValue (Cell, RowData) -> void
+     * 操作单元格（Cell），每次设置数据之后执行
+     * @param operateCell (Cell, RowData) -> void
      * @return this
      */
     @Override
-    public SheetOperate<T> operateValue(BiConsumer<SXSSFCell, Object> operateValue) {
-        this.operateValue = operateValue;
+    public SheetOperate<T> operateCell(BiConsumer<SXSSFCell, Object> operateCell) {
+        this.operateCell = operateCell;
         return this;
     }
 
     /**
-     * 操作数据，每次设置完一行数据之后执行
+     * 操作Row，每次设置完一行数据之后执行
      * @param operateRow (Row, RowData) -> void
      * @return this
      */
@@ -284,7 +284,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         CellStyle cellStyle = workbook.createCellStyle();
         // 设置字体
         Font font = workbook.createFont();
-        font.setFontHeightInPoints(getValueSize());
+        font.setFontHeightInPoints(getFontSize());
         cellStyle.setFont(font);
         // 设置边框
         cellStyle.setBorderTop(BorderStyle.THIN);
@@ -402,15 +402,15 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         }
     }
 
-    void operateRow(SXSSFRow row, Object data) {
+    void operateRow(SXSSFRow row, Object rowData) {
         if (operateRow != null) {
-            operateRow.accept(row, data);
+            operateRow.accept(row, rowData);
         }
     }
 
-    void operateValue(SXSSFCell cell, Object data) {
-        if (operateValue != null) {
-            operateValue.accept(cell, data);
+    void operateCell(SXSSFCell cell, Object rowData) {
+        if (operateCell != null) {
+            operateCell.accept(cell, rowData);
         }
     }
 
@@ -420,13 +420,13 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         }
     }
 
-    CellStyle operateCellStyle(CellField cellField, Object value) {
+    CellStyle operateCellStyle(CellField cellField, Object rowData) {
         int index = cellField.getIndex();
         CellStyle cellStyle = cellField.getCellStyle();
         BiConsumer<CellStyle, Object> cellStyleFun = cellStyleFunMap.get(index);
         if (cellStyleFun != null) {
             CellStyle newCellStyle = this.getCellStyle();
-            cellStyleFun.accept(newCellStyle, value);
+            cellStyleFun.accept(newCellStyle, rowData);
             cellStyle = newCellStyle;
         }
         return cellStyle;
@@ -460,16 +460,16 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         return titleSize;
     }
 
-    public short getValueSize() {
-        return valueSize;
+    public short getFontSize() {
+        return fontSize;
     }
 
     public float getTitleHeight() {
         return titleHeight;
     }
 
-    public float getValueHeight() {
-        return valueHeight;
+    public float getRowHeight() {
+        return rowHeight;
     }
 
     public int getColumnWidth() {

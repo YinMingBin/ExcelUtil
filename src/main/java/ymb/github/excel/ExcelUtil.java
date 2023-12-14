@@ -76,13 +76,13 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 设置数据的字体大小
-     * @param valueSize 字体大小
+     * 设置Cell的字体大小
+     * @param fontSize 字体大小
      * @return this
      */
     @Override
-    public ExcelUtil<T> setValueSize(short valueSize) {
-        sheetOperate.setValueSize(valueSize);
+    public ExcelUtil<T> setFontSize(short fontSize) {
+        sheetOperate.setFontSize(fontSize);
         return this;
     }
 
@@ -99,12 +99,12 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
 
     /**
      * 设置数据的行高
-     * @param valueHeight 行高
+     * @param rowHeight 行高
      * @return this
      */
     @Override
-    public ExcelUtil<T> setValueHeight(short valueHeight) {
-        sheetOperate.setValueHeight(valueHeight);
+    public ExcelUtil<T> setRowHeight(short rowHeight) {
+        sheetOperate.setRowHeight(rowHeight);
         return this;
     }
 
@@ -131,7 +131,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 设置数据样式
+     * 设置单元格（Cell）l样式
      * @param cellStyleFun (CellStyle) -> void
      * @return this
      */
@@ -142,7 +142,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 操作某一列数据的样式 (设置Cell时调用)
+     * 操作某一列单元格（Cell）的样式 (设置完数据时调用)
      * @param columnIndex 列索引
      * @param cellStyle (CellStyle, rowData) -> void
      * @return this
@@ -165,18 +165,18 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 操作数据，每次设置数据之后执行
-     * @param operateValue (Cell, rowData) -> void
+     * 操作单元格（Cell），每次设置数据之后执行
+     * @param operateCell (Cell, rowData) -> void
      * @return this
      */
     @Override
-    public ExcelUtil<T> operateValue(BiConsumer<SXSSFCell, Object> operateValue) {
-        sheetOperate.operateValue(operateValue);
+    public ExcelUtil<T> operateCell(BiConsumer<SXSSFCell, Object> operateCell) {
+        sheetOperate.operateCell(operateCell);
         return this;
     }
 
     /**
-     * 操作数据，每次设置完一行数据之后执行
+     * 操作单元格（Cell），每次设置完一行数据之后执行
      * @param operateRow (Row, rowData) -> void
      * @return this
      */
@@ -519,7 +519,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             return rowIndex;
         }
         SXSSFSheet sheet = currentSheet.getSheet();
-        float valueHeight = currentSheet.getValueHeight();
+        float rowHeight = currentSheet.getRowHeight();
         // 设置数据
         for (R data : dataList) {
             int rowIndexCopy = rowIndex;
@@ -545,10 +545,10 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     cell.setCellType(cellType);
                     setValue(cell, value, cellType);
                     setColumnWidth(cell, 0);
-                    currentSheet.operateValue(cell, data);
+                    currentSheet.operateCell(cell, data);
                 }
             }
-            row.setHeightInPoints(valueHeight);
+            row.setHeightInPoints(rowHeight);
             for (CellField cellField : cellFields) {
                 if (rowIndexCopy < rowIndex && cellField.getCellFields() == null) {
                     int columnIndex = cellField.getIndex();
