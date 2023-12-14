@@ -42,10 +42,9 @@ public class ExcelImportUtil {
         this.startRow = 0;
         // 获取CellField 及 数据开始行
         ExcelClass annotation = tClass.getAnnotation(ExcelClass.class);
-        List<CellField> fields = getFields(tClass, annotation == null ? -1 : 0);
-        // 循环读取数据
-        getList(tClass, fields, startRow);
-        return null;
+        List<CellField> fields = getFields(tClass, annotation == null ? 0 : 1);
+        // 读取数据
+        return getDataList(tClass, fields, startRow);
     }
 
     private List<CellField> getFields(Class<?> tClass, int rowIndex) {
@@ -95,35 +94,44 @@ public class ExcelImportUtil {
         return cellField;
     }
 
-    private <T> T getList(Class<T> tClass, List<CellField> fields, Integer rowIndex) {
-        Row row = this.sheet.getRow(rowIndex);
-        if (row != null) {
-            try {
-                T t = tClass.newInstance();
-                for (CellField field : fields) {
-                    Class<?> fieldType = field.getFieldType();
-                    if (Collection.class.isAssignableFrom(fieldType)) {
 
-                    }
-                    List<CellField> cellFields = field.getCellFields();
-                    if (cellFields != null) {
-                        Object value = getList(fieldType, cellFields, rowIndex);
-                        field.getSettingFun().accept(t, value);
-                        continue;
-                    }
-                    int index = field.getIndex();
-                    Cell cell = row.getCell(index);
-                    if (cell == null) {
-                        continue;
-                    }
-                    CellType cellType = field.getCellType();
-                    Object value = getValue(cell, cellType, fieldType);
-                    field.getSettingFun().accept(t, value);
-                }
-                return t;
-            } catch (InstantiationException | IllegalAccessException e) {
-                System.err.println(tClass + " create fail:\n" + e.getMessage());
+    private <T> List<T> getDataList(Class<T> tClass, List<CellField> fields, Integer rowIndex) {
+        List<T> list = new ArrayList<>();
+        Row row = this.sheet.getRow(rowIndex);
+        while (row != null) {
+            T rowData = getRowData(tClass, fields, row);
+            if (rowData != null) {
+                list.add(rowData);
             }
+            row = this.sheet.getRow(++rowIndex);
+        }
+        return list;
+    }
+
+
+    private <T> T getRowData(Class<T> tClass, List<CellField> fields, Row row) {
+        try {
+            T t = tClass.newInstance();
+            for (CellField field : fields) {
+                Class<?> fieldType = field.getFieldType();
+                List<CellField> cellFields = field.getCellFields();
+                if (cellFields != null) {
+                    Object value = getDataList(fieldType, cellFields, row.getRowNum());
+                    field.getSettingFun().accept(t, value);
+                    continue;
+                }
+                int index = field.getIndex();
+                Cell cell = row.getCell(index);
+                if (cell == null) {
+                    continue;
+                }
+                CellType cellType = field.getCellType();
+                Object value = getValue(cell, cellType, fieldType);
+                field.getSettingFun().accept(t, value);
+            }
+            return t;
+        } catch (InstantiationException | IllegalAccessException e) {
+            System.err.println(tClass + " create fail:\n" + e.getMessage());
         }
         return null;
     }
@@ -139,9 +147,23 @@ public class ExcelImportUtil {
             value = cell.getDateCellValue();
         } else if (RichTextString.class.isAssignableFrom(fieldType)) {
             value = cell.getRichStringCellValue();
+        } else if (Character.class.isAssignableFrom(fieldType) || char.class.isAssignableFrom(fieldType)) {
+            value = cell.getStringCellValue().charAt(0);
         } else if (CellType.NUMERIC.equals(cellType)) {
             double cellValue = cell.getNumericCellValue();
-            value = fieldType.cast(cellValue);
+            if (Byte.class.isAssignableFrom(fieldType) || byte.class.isAssignableFrom(fieldType)) {
+                value = (byte) cellValue;
+            } else if (Short.class.isAssignableFrom(fieldType) || short.class.isAssignableFrom(fieldType)) {
+                value = (short) cellValue;
+            } else if (Integer.class.isAssignableFrom(fieldType) || int.class.isAssignableFrom(fieldType)) {
+                value = (int) cellValue;
+            } else if (Long.class.isAssignableFrom(fieldType) || long.class.isAssignableFrom(fieldType)) {
+                value = (long) cellValue;
+            } else if (Float.class.isAssignableFrom(fieldType) || float.class.isAssignableFrom(fieldType)) {
+                value = (float) cellValue;
+            } else if (Double.class.isAssignableFrom(fieldType) || double.class.isAssignableFrom(fieldType)) {
+                value = cellValue;
+            }
         } else if (CellType.BOOLEAN.equals(cellType)) {
             value = cell.getBooleanCellValue();
         } else if (!CellType.BLANK.equals(cellType)) {
