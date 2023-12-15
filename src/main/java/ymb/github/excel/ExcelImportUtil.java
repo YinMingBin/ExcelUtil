@@ -1,7 +1,6 @@
 package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import ymb.github.excel.annotation.AllFieldColumn;
 import ymb.github.excel.annotation.ExcelClass;
@@ -11,15 +10,16 @@ import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * Excel导入工具类
  * @author WuLiao
  */
+@SuppressWarnings("unused")
 public class ExcelImportUtil {
     private final Workbook workbook;
     private Sheet sheet;
@@ -27,6 +27,10 @@ public class ExcelImportUtil {
 
     public ExcelImportUtil(InputStream is) throws IOException {
         this.workbook = new XSSFWorkbook(is);
+    }
+
+    public Workbook getWorkbook() {
+        return workbook;
     }
 
     public <T> List<T> read(Class<T> tClass) {
@@ -38,18 +42,55 @@ public class ExcelImportUtil {
     }
 
     public <T> List<T> read(Class<T> tClass, int sheetIndex) {
+        return read(tClass, () -> {
+            ExcelClass annotation = tClass.getAnnotation(ExcelClass.class);
+            return getFields(tClass, annotation == null ? 0 : 1);
+        }, sheetIndex);
+    }
+
+    @SafeVarargs
+    public final <T> List<T> read(Class<T> tClass, SFunction<T, ?>... getFunArr) {
+        return read(tClass, 0, getFunArr);
+    }
+
+    @SafeVarargs
+    public final <T> List<T> read(Class<T> tClass, String sheetName, SFunction<T, ?>... getFunArr) {
+        return read(tClass, workbook.getSheetIndex(sheetName), getFunArr);
+    }
+
+    @SafeVarargs
+    public final <T> List<T> read(Class<T> tClass, int sheetIndex, SFunction<T, ?>... getFunArr) {
+        return read(tClass, () -> {
+            Field[] fields = new Field[getFunArr.length];
+            for (int i = 0; i < getFunArr.length; i++) {
+                SFunction<T, ?> getFun = getFunArr[i];
+                try {
+                    String fieldName = SFunction.getFieldName(getFun);
+                    Field field = tClass.getDeclaredField(fieldName);
+                    fields[i] = field;
+                } catch (ReflectiveOperationException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            ExcelClass annotation = tClass.getAnnotation(ExcelClass.class);
+            return getFields(tClass, annotation == null ? 0 : 1, fields);
+        }, sheetIndex);
+    }
+
+     private <T> List<T> read(Class<T> tClass, Supplier<List<CellField>> getCellFields, int sheetIndex) {
+        // 重置数据
         this.sheet = workbook.getSheetAt(sheetIndex);
         this.startRow = 0;
-        // 获取CellField 及 数据开始行
-        ExcelClass annotation = tClass.getAnnotation(ExcelClass.class);
-        List<CellField> fields = getFields(tClass, annotation == null ? 0 : 1);
         // 读取数据
-        return getDataList(tClass, fields, startRow);
+        return getDataList(tClass, getCellFields.get(), startRow);
     }
 
     private List<CellField> getFields(Class<?> tClass, int rowIndex) {
+        return getFields(tClass, rowIndex, tClass.getDeclaredFields());
+    }
+
+    private List<CellField> getFields(Class<?> tClass, int rowIndex, Field[] fields) {
         rowIndex++;
-        Field[] fields = tClass.getDeclaredFields();
         List<CellField> fieldList = new ArrayList<>();
         AllFieldColumn fieldColumn = tClass.getAnnotation(AllFieldColumn.class);
         for (Field field : fields) {
