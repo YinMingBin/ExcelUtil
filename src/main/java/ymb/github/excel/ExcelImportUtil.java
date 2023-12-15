@@ -53,6 +53,9 @@ public class ExcelImportUtil {
         List<CellField> fieldList = new ArrayList<>();
         AllFieldColumn fieldColumn = tClass.getAnnotation(AllFieldColumn.class);
         for (Field field : fields) {
+            if (Collection.class.isAssignableFrom(field.getType())) {
+                continue;
+            }
             ExcelColumnClass column = ExcelColumnClass.getExcelColumn(fieldColumn, field);
             if (column != null) {
                 fieldList.add(getCellField(tClass, field, column, rowIndex));
@@ -84,13 +87,7 @@ public class ExcelImportUtil {
         } catch (NoSuchMethodException e) {
             System.err.println("The " + methodName + " method call failure\n" + e.getMessage());
         }
-        if (Collection.class.isAssignableFrom(field.getType())) {
-            ParameterizedType genericType = (ParameterizedType) field.getGenericType();
-            Class<?> fieldType = (Class<?>) genericType.getActualTypeArguments()[0];
-            cellField.setCellFields(getFields(fieldType, rowIndex));
-        } else {
-            cellField.setCellType(column.getType());
-        }
+        cellField.setCellType(column.getType());
         return cellField;
     }
 
@@ -114,12 +111,6 @@ public class ExcelImportUtil {
             T t = tClass.newInstance();
             for (CellField field : fields) {
                 Class<?> fieldType = field.getFieldType();
-                List<CellField> cellFields = field.getCellFields();
-                if (cellFields != null) {
-                    Object value = getDataList(fieldType, cellFields, row.getRowNum());
-                    field.getSettingFun().accept(t, value);
-                    continue;
-                }
                 int index = field.getIndex();
                 Cell cell = row.getCell(index);
                 if (cell == null) {
