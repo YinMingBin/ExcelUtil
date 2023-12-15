@@ -393,14 +393,22 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 关闭流
+     * 关闭Workbook流
      */
     public void close() {
         try {
             workbook.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.err.println("ExcelUtil -> workbook close error:" + e.getMessage());
         }
+    }
+
+    /**
+     * 关闭Workbook流并将传入的输出流关闭
+     */
+    public void close(OutputStream os) throws IOException {
+        this.close();
+        os.close();
     }
 
     private int setExcelTitle(List<CellField> fieldList) {

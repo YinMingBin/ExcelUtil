@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 
 /**
  * Excel导入工具类
+ *
  * @author WuLiao
  */
 @SuppressWarnings("unused")
@@ -25,22 +26,106 @@ public class ExcelImportUtil {
     private Sheet sheet;
     private int startRow;
 
+    /**
+     * 唯一的构造方法
+     *
+     * @param is Excel文件输入流
+     * @throws IOException io异常
+     */
     public ExcelImportUtil(InputStream is) throws IOException {
         this.workbook = new XSSFWorkbook(is);
     }
 
+    /**
+     * 获取Workbook对象
+     *
+     * @return Workbook对象
+     */
     public Workbook getWorkbook() {
         return workbook;
     }
 
+    /**
+     * 读取Excel文件中的数据
+     *
+     * @param is        Excel文件输入流
+     * @param tClass    数据类型对象
+     * @param sheetName Excel中Sheet的名称
+     * @param <T>       数据类型
+     * @return 数据集
+     * @throws IOException io异常
+     */
+    public static <T> List<T> read(InputStream is, Class<T> tClass, String sheetName) throws IOException {
+        ExcelImportUtil util = new ExcelImportUtil(is);
+        List<T> dataList = util.read(tClass, sheetName);
+        util.close();
+        return dataList;
+    }
+
+    /**
+     * 读取Excel文件中的数据
+     *
+     * @param is         Excel文件输入流
+     * @param tClass     数据类型对象
+     * @param sheetIndex Excel中Sheet的下标
+     * @param <T>        数据类型
+     * @return 数据集
+     * @throws IOException io异常
+     */
+    public static <T> List<T> read(InputStream is, Class<T> tClass, int sheetIndex) throws IOException {
+        ExcelImportUtil util = new ExcelImportUtil(is);
+        List<T> dataList = util.read(tClass, sheetIndex);
+        util.close();
+        return dataList;
+    }
+
+    /**
+     * 读取Excel文件中的数据（读取第一个Sheet的数据）
+     *
+     * @param is     Excel文件输入流
+     * @param tClass 数据类型对象
+     * @param <T>    数据类型
+     * @return 数据集
+     * @throws IOException io异常
+     */
+    public static <T> List<T> read(InputStream is, Class<T> tClass) throws IOException {
+        ExcelImportUtil util = new ExcelImportUtil(is);
+        List<T> dataList = util.read(tClass, 0);
+        util.close();
+        return dataList;
+    }
+
+    /**
+     * 读取Excel文件中的数据（读取第一个Sheet的数据）
+     *
+     * @param tClass 数据类型对象
+     * @param <T>    数据类型
+     * @return 数据集
+     */
     public <T> List<T> read(Class<T> tClass) {
         return this.read(tClass, 0);
     }
 
+    /**
+     * 读取Excel文件中的数据
+     *
+     * @param tClass    数据类型对象
+     * @param sheetName Excel中Sheet的名称
+     * @param <T>       数据类型
+     * @return 数据集
+     */
     public <T> List<T> read(Class<T> tClass, String sheetName) {
         return this.read(tClass, workbook.getSheetIndex(sheetName));
     }
 
+    /**
+     * 读取Excel文件中的数据
+     *
+     * @param tClass     数据类型对象
+     * @param sheetIndex Excel中Sheet的下标
+     * @param <T>        数据类型
+     * @return 数据集
+     */
     public <T> List<T> read(Class<T> tClass, int sheetIndex) {
         return read(tClass, () -> {
             ExcelClass annotation = tClass.getAnnotation(ExcelClass.class);
@@ -48,16 +133,42 @@ public class ExcelImportUtil {
         }, sheetIndex);
     }
 
+    /**
+     * 根据对象中的某些属性，读取Excel文件中的数据
+     *
+     * @param tClass    数据类型对象
+     * @param getFunArr 对象中属性的get方法
+     * @param <T>       数据类型
+     * @return 数据集
+     */
     @SafeVarargs
     public final <T> List<T> read(Class<T> tClass, SFunction<T, ?>... getFunArr) {
         return read(tClass, 0, getFunArr);
     }
 
+    /**
+     * 根据对象中的某些属性，读取Excel文件中的数据
+     *
+     * @param tClass    数据类型对象
+     * @param sheetName Excel中Sheet的名称
+     * @param getFunArr 对象中属性的get方法
+     * @param <T>       数据类型
+     * @return 数据集
+     */
     @SafeVarargs
     public final <T> List<T> read(Class<T> tClass, String sheetName, SFunction<T, ?>... getFunArr) {
         return read(tClass, workbook.getSheetIndex(sheetName), getFunArr);
     }
 
+    /**
+     * 根据对象中的某些属性，读取Excel文件中的数据
+     *
+     * @param tClass 数据类型对象
+     * @param sheetIndex Excel中Sheet的下标
+     * @param getFunArr 对象中属性的get方法
+     * @param <T> 数据类型
+     * @return 数据集
+     */
     @SafeVarargs
     public final <T> List<T> read(Class<T> tClass, int sheetIndex, SFunction<T, ?>... getFunArr) {
         return read(tClass, () -> {
@@ -77,7 +188,7 @@ public class ExcelImportUtil {
         }, sheetIndex);
     }
 
-     private <T> List<T> read(Class<T> tClass, Supplier<List<CellField>> getCellFields, int sheetIndex) {
+    private <T> List<T> read(Class<T> tClass, Supplier<List<CellField>> getCellFields, int sheetIndex) {
         // 重置数据
         this.sheet = workbook.getSheetAt(sheetIndex);
         this.startRow = 0;
@@ -202,5 +313,25 @@ public class ExcelImportUtil {
             value = cell.getStringCellValue();
         }
         return value;
+    }
+
+    /**
+     * 关闭Workbook流
+     */
+    public void close() {
+        try {
+            workbook.close();
+        } catch (IOException e) {
+            System.err.println("ExcelImportUtil -> workbook close error:" + e.getMessage());
+        }
+    }
+
+    /**
+     * 关闭Workbook流并将传入的输入流关闭
+     * @throws IOException io异常
+     */
+    public void close(InputStream is) throws IOException {
+        this.close();
+        is.close();
     }
 }
