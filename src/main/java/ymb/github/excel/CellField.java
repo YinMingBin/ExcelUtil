@@ -1,7 +1,6 @@
 package ymb.github.excel;
 
 import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.CellType;
 
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -21,7 +20,11 @@ class CellField {
     private List<CellField> cellFields;
     private int width;
 
-    void setTitle(String title, String title2) {
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setTitle(String title, String title2) {
         if (title == null || title.isEmpty()) {
             title = title2;
         }

@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 
 /**
  * Excel导入工具类
+ * 目前只能读取简单的结构（Field中不包含List类型的）
  *
  * @author WuLiao
  */
@@ -205,15 +206,22 @@ public class ExcelImportUtil {
         List<CellField> fieldList = new ArrayList<>();
         AllFieldColumn fieldColumn = tClass.getAnnotation(AllFieldColumn.class);
         for (Field field : fields) {
-            if (Collection.class.isAssignableFrom(field.getType())) {
+            Class<?> type = field.getType();
+            if (Collection.class.isAssignableFrom(type)) {
                 continue;
             }
             ExcelColumnClass column = ExcelColumnClass.getExcelColumn(fieldColumn, field);
             if (column != null) {
-                fieldList.add(getCellField(tClass, field, column, rowIndex));
+                CellField cellField = getCellField(tClass, field, column, rowIndex);
+                if (CellType.OBJECT.equals(column.getType())) {
+                    List<CellField> chiFields = getFields(type, rowIndex + 1, type.getDeclaredFields());
+                    cellField.setCellFields(chiFields);
+                }
+                fieldList.add(cellField);
             }
         }
         SheetOperate.sortFields(fieldList);
+        settingColumnIndex(fieldList, 0);
         return fieldList;
     }
 
@@ -243,6 +251,16 @@ public class ExcelImportUtil {
         return cellField;
     }
 
+    private int settingColumnIndex(List<CellField> fields, int index) {
+        for (CellField field : fields) {
+            if (CellType.OBJECT.equals(field.getCellType())) {
+                index = settingColumnIndex(field.getCellFields(), index);
+                continue;
+            }
+            field.setIndex(index++);
+        }
+        return index;
+    }
 
     private <T> List<T> getDataList(Class<T> tClass, List<CellField> fields, Integer rowIndex) {
         List<T> list = new ArrayList<>();
@@ -268,19 +286,27 @@ public class ExcelImportUtil {
                 if (cell == null) {
                     continue;
                 }
+                Object value;
                 CellType cellType = field.getCellType();
-                Object value = getValue(cell, cellType, fieldType);
+                if (CellType.OBJECT.equals(cellType)) {
+                    value = getRowData(fieldType, field.getCellFields(), row);
+                } else {
+                    value = getValue(cell, cellType, fieldType);
+                }
                 field.getSettingFun().accept(t, value);
             }
             return t;
         } catch (InstantiationException | IllegalAccessException e) {
-            System.err.println(tClass + " create fail:\n" + e.getMessage());
+            System.err.println(tClass + " create fail, A parameterless constructor is required");
         }
         return null;
     }
 
     private Object getValue(Cell cell, CellType cellType, Class<?> fieldType) {
         Object value = null;
+        if (CellType.BLANK.equals(cellType)) {
+            return null;
+        }
         if (LocalDate.class.isAssignableFrom(fieldType)) {
             LocalDateTime cellValue = cell.getLocalDateTimeCellValue();
             value = cellValue.toLocalDate();
@@ -292,7 +318,7 @@ public class ExcelImportUtil {
             value = cell.getRichStringCellValue();
         } else if (Character.class.isAssignableFrom(fieldType) || char.class.isAssignableFrom(fieldType)) {
             value = cell.getStringCellValue().charAt(0);
-        } else if (CellType.NUMERIC.equals(cellType)) {
+        } else if (CellType.NUMBER.equals(cellType)) {
             double cellValue = cell.getNumericCellValue();
             if (Byte.class.isAssignableFrom(fieldType) || byte.class.isAssignableFrom(fieldType)) {
                 value = (byte) cellValue;
@@ -309,7 +335,9 @@ public class ExcelImportUtil {
             }
         } else if (CellType.BOOLEAN.equals(cellType)) {
             value = cell.getBooleanCellValue();
-        } else if (!CellType.BLANK.equals(cellType)) {
+        } else if (CellType.STRING.equals(cellType)) {
+            value = cell.getStringCellValue();
+        } else if (CellType.FORMULA.equals(cellType)) {
             value = cell.getStringCellValue();
         }
         return value;

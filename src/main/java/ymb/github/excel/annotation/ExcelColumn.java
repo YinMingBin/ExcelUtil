@@ -1,6 +1,10 @@
 package ymb.github.excel.annotation;
 
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import ymb.github.excel.CellType;
 
 import java.lang.annotation.*;
 

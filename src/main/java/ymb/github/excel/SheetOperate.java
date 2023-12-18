@@ -1,5 +1,6 @@
 package ymb.github.excel;
 
+import javafx.util.Pair;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
@@ -7,7 +8,6 @@ import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import ymb.github.excel.annotation.AllFieldColumn;
 
-import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -15,7 +15,6 @@ import java.lang.reflect.ParameterizedType;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -38,10 +37,11 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private float titleHeight = 25;
     private float rowHeight = 20;
     private int columnWidth = 10;
-    private final Map<Integer, BiConsumer<CellStyle, Object>> cellStyleFunMap = new HashMap<>();
+    private Map<Integer, BiConsumer<CellStyle, Object>> cellStyleFunMap;
     private Consumer<CellStyle> cellStyleFun = cell -> {};
     private Consumer<CellStyle> titleStyleFun = cell -> {};
     private boolean autoColumnWidth = false;
+    private List<Pair<SFunction<T, ?>, ExcelColumnClass>> columnFunctions;
 
     private SheetOperate(Class<T> tClass) {
         this.tClass = tClass;
@@ -160,6 +160,9 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      */
     @Override
     public SheetOperate<T> operateCellStyle(int index, BiConsumer<CellStyle, Object> cellStyle) {
+        if (cellStyleFunMap == null) {
+            cellStyleFunMap = new HashMap<>(5);
+        }
         cellStyleFunMap.put(index, cellStyle);
         return this;
     }
@@ -215,12 +218,19 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      */
     @SafeVarargs
     @Override
-    public final SheetOperate<T> settingColumn(SFunction<T, Object>... functions) {
-        for (SFunction<T, ?> function : functions) {
-            if (function != null) {
-                settingColumn(function, null);
-            }
+    public final SheetOperate<T> settingColumn(SFunction<T, ?>... functions) {
+        if (functions == null) {
+            return this;
         }
+
+        if (columnFunctions == null) {
+            columnFunctions = new ArrayList<>(5);
+        }
+
+        for (SFunction<T, ?> function : functions) {
+            columnFunctions.add(new Pair<>(function, null));
+        }
+
         return this;
     }
 
@@ -232,33 +242,14 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      */
     @Override
     public SheetOperate<T> settingColumn(SFunction<T, ?> function, ExcelColumnClass columnClass) {
-        if (function == null) {
-            return this;
-        }
+        if (function != null) {
 
-        try {
-            String fieldName = SFunction.getFieldName(function);
-            try {
-                Field field = gettClass().getDeclaredField(fieldName);
-                if (this.fields == null) {
-                    this.fields = new ArrayList<>();
-                }
-                if (columnClass == null) {
-                    AllFieldColumn fieldColumn = tClass.getAnnotation(AllFieldColumn.class);
-                    columnClass = ExcelColumnClass.getExcelColumn(fieldColumn, field);
-                    if (columnClass == null) {
-                        columnClass = ExcelColumnClass.build();
-                    }
-                }
-                this.fields.add(getCellField(gettClass(), field, columnClass));
-                sortFields(this.fields);
-            } catch (NoSuchFieldException e) {
-                System.err.println("Get Field: " + fieldName + " Fail!\n" + e.getMessage());
+            if (columnFunctions == null) {
+                columnFunctions = new ArrayList<>(5);
             }
-        } catch (ReflectiveOperationException e) {
-            System.err.println("Get FieldName Fail!\n" + e.getMessage());
-        }
 
+            columnFunctions.add(new Pair<>(function, columnClass));
+        }
         return this;
     }
 
@@ -323,7 +314,32 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     List<CellField> getFields() {
         if (this.fields == null) {
-            this.fields = getFields(tClass);
+            if (columnFunctions == null) {
+                this.fields = getFields(tClass);
+            } else {
+                this.fields = new ArrayList<>(columnFunctions.size());
+                for (Pair<SFunction<T, ?>, ExcelColumnClass> pair : columnFunctions) {
+                    try {
+                        String fieldName = SFunction.getFieldName(pair.getKey());
+                        try {
+                            ExcelColumnClass columnClass = pair.getValue();
+                            Field field = gettClass().getDeclaredField(fieldName);
+                            if (columnClass == null) {
+                                AllFieldColumn fieldColumn = tClass.getAnnotation(AllFieldColumn.class);
+                                columnClass = ExcelColumnClass.getExcelColumn(fieldColumn, field);
+                                if (columnClass == null) {
+                                    columnClass = ExcelColumnClass.build();
+                                }
+                            }
+                            this.fields.add(getCellField(gettClass(), field, columnClass));
+                        } catch (NoSuchFieldException e) {
+                            System.err.println("Get Field: " + fieldName + " Fail!\n" + e.getMessage());
+                        }
+                    } catch (ReflectiveOperationException e) {
+                        System.err.println("Get FieldName Fail!\n" + e.getMessage());
+                    }
+                }
+            }
         }
         return this.fields;
     }
@@ -349,7 +365,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         char[] chars = name.toCharArray();
         chars[0] = Character.toUpperCase(chars[0]);
         String nameFormat = String.valueOf(chars);
-        cellField.setTitle(column.getTitle(), nameFormat.replaceAll("(?<![A-Z]|^)[A-Z]", " $0"));
+        String title = column.getTitle();
         String methodName = "get" + nameFormat;
         try {
             final Method method = tClass.getDeclaredMethod(methodName);
@@ -368,7 +384,19 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
             ParameterizedType genericType = (ParameterizedType) field.getGenericType();
             Class<?> fieldType = (Class<?>) genericType.getActualTypeArguments()[0];
             cellField.setCellFields(getFields(fieldType));
+            cellField.setCellType(CellType.LIST);
+            if (title != null && !title.isEmpty()) {
+                cellField.setTitle(title);
+            }
+        } else if (CellType.OBJECT.equals(column.getType())) {
+            Class<?> type = field.getType();
+            cellField.setCellFields(getFields(type));
+            cellField.setCellType(CellType.OBJECT);
+            if (title != null && !title.isEmpty()) {
+                cellField.setTitle(title);
+            }
         } else {
+            cellField.setTitle(title, nameFormat.replaceAll("(?<![A-Z]|^)[A-Z]", " $0"));
             cellField.setCellType(column.getType());
             CellStyle cellStyle = getCellStyle();
             Font font = workbook.getFontAt(cellStyle.getFontIndex());
@@ -421,8 +449,11 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     }
 
     CellStyle operateCellStyle(CellField cellField, Object rowData) {
-        int index = cellField.getIndex();
         CellStyle cellStyle = cellField.getCellStyle();
+        if (cellStyleFunMap == null) {
+            return cellStyle;
+        }
+        int index = cellField.getIndex();
         BiConsumer<CellStyle, Object> cellStyleFun = cellStyleFunMap.get(index);
         if (cellStyleFun != null) {
             CellStyle newCellStyle = this.getCellStyle();

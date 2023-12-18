@@ -204,7 +204,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      */
     @SafeVarargs
     @Override
-    public final ExcelUtil<T> settingColumn(SFunction<T, Object>... functions) {
+    public final ExcelUtil<T> settingColumn(SFunction<T, ?>... functions) {
         sheetOperate.settingColumn(functions);
         return this;
     }
@@ -471,11 +471,19 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             if (cell == null) {
                 cell = row.createCell(cellIndex);
             }
-            cell.setCellValue(field.getTitle());
+            String title = field.getTitle();
+            cell.setCellValue(title);
             cell.setCellStyle(titleStyle);
             setColumnWidth(cell, field.getWidth() * 256);
+
             List<CellField> cellFields = field.getCellFields();
             if (cellFields != null) {
+                if (title == null || title.isEmpty()) {
+                    int[] area = setExcelTitle(cellFields, rowIndex, cellIndex);
+                    maxRow = Math.max(maxRow, area[0]);
+                    cellIndex = area[1] + 1;
+                    continue;
+                }
                 int[] area = setExcelTitle(cellFields, rowIndex + 1, cellIndex);
                 maxRow = Math.max(maxRow, area[0]);
                 if (area[1] < cellIndex) {
@@ -501,6 +509,11 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     int index = field.getIndex();
                     mergeRegion(rowIndex, maxRow, index, index, titleStyle);
                 } else {
+                    String title = field.getTitle();
+                    if (title == null || title.isEmpty()) {
+                        mergeTitle(rowIndex, maxRow, cellFields);
+                        continue;
+                    }
                     mergeTitle(rowIndex + 1, maxRow, cellFields);
                 }
             }
@@ -530,6 +543,9 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         float rowHeight = currentSheet.getRowHeight();
         // 设置数据
         for (R data : dataList) {
+            if (data == null) {
+                continue;
+            }
             int rowIndexCopy = rowIndex;
             SXSSFRow row = sheet.getRow(rowIndex);
             if (row == null) {
@@ -538,9 +554,12 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             for (CellField cellField : cellFields) {
                 Object value = cellField.getValueFun().apply(data);
                 List<CellField> cellFieldChi = cellField.getCellFields();
-                if (cellFieldChi != null) {
+                CellType cellType = cellField.getCellType();
+                if (CellType.LIST.equals(cellType)) {
                     int rowI = setExcelData((Collection<?>) value, cellFieldChi, rowIndexCopy);
                     rowIndex = Math.max(rowIndex, rowI);
+                } else if (CellType.OBJECT.equals(cellType)) {
+                    setExcelData(Collections.singletonList(value), cellFieldChi, rowIndexCopy);
                 } else {
                     int cellIndex = cellField.getIndex();
                     SXSSFCell cell = row.getCell(cellIndex);
@@ -549,24 +568,32 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     }
                     cell.setCellStyle(currentSheet.operateCellStyle(cellField, data));
                     cellField.setCellStyle(cell.getCellStyle());
-                    CellType cellType = cellField.getCellType();
-                    cell.setCellType(cellType);
+                    cell.setCellType(cellType.getCellType());
                     setValue(cell, value, cellType);
                     setColumnWidth(cell, 0);
                     currentSheet.operateCell(cell, data);
                 }
             }
             row.setHeightInPoints(rowHeight);
-            for (CellField cellField : cellFields) {
-                if (rowIndexCopy < rowIndex && cellField.getCellFields() == null) {
-                    int columnIndex = cellField.getIndex();
-                    mergeRegion(rowIndexCopy, rowIndex, columnIndex, columnIndex, cellField.getCellStyle());
-                }
-            }
+            mergeDataRow(cellFields, rowIndexCopy, rowIndex);
             currentSheet.operateRow(row, data);
             rowIndex++;
         }
         return rowIndex - 1;
+    }
+
+    private void mergeDataRow(List<CellField> cellFields,int startRowIndex, int maxRowIndex) {
+        if (startRowIndex < maxRowIndex) {
+            for (CellField cellField : cellFields) {
+                List<CellField> cellFieldList = cellField.getCellFields();
+                if (cellFieldList == null) {
+                    int columnIndex = cellField.getIndex();
+                    mergeRegion(startRowIndex, maxRowIndex, columnIndex, columnIndex, cellField.getCellStyle());
+                } else if (CellType.OBJECT.equals(cellField.getCellType())){
+                    mergeDataRow(cellFieldList, startRowIndex, maxRowIndex);
+                }
+            }
+        }
     }
 
     public void setColumnWidth(SXSSFCell cell, int columnWidth) {
@@ -592,7 +619,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     private void setValue(SXSSFCell cell, Object value, CellType cellType) {
-        if (value != null) {
+        if (value != null && !CellType.BLANK.equals(cellType)) {
             if (value instanceof LocalDate) {
                 cell.setCellValue((LocalDate) value);
             } else if (value instanceof LocalDateTime) {
@@ -603,11 +630,15 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                 cell.setCellValue((Calendar) value);
             } else if (value instanceof RichTextString) {
                 cell.setCellValue((RichTextString) value);
-            } else if (CellType.NUMERIC.equals(cellType)) {
+            } else if (CellType.NUMBER.equals(cellType)) {
                 cell.setCellValue(Double.parseDouble(String.valueOf(value)));
             } else if (CellType.BOOLEAN.equals(cellType)) {
                 cell.setCellValue(Boolean.parseBoolean(String.valueOf(value)));
-            } else if (!CellType.BLANK.equals(cellType)) {
+            } else if (CellType.STRING.equals(cellType)) {
+                cell.setCellValue(String.valueOf(value));
+            } else if(CellType.FORMULA.equals(cellType)) {
+                cell.setCellValue(String.valueOf(value));
+            } else {
                 cell.setCellValue(String.valueOf(value));
             }
         }

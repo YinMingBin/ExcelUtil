@@ -114,7 +114,7 @@ public interface Operate<T, R> {
      * @param functions 字段的get方法（不定项参数）
      * @return this
      */
-    R settingColumn(SFunction<T, Object>... functions);
+    R settingColumn(SFunction<T, ?>... functions);
 
     /**
      * 设置列
