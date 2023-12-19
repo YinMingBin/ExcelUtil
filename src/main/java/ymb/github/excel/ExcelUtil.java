@@ -221,6 +221,10 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         return this;
     }
 
+    /**
+     * 启用自适应列宽（效率较低）
+     * @return this
+     */
     @Override
     public ExcelUtil<T> autoColumnWidth() {
         sheetOperate.autoColumnWidth();
