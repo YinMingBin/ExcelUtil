@@ -176,6 +176,18 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
+     * 操作某一列的单元格（Cell），每次设置数据之后执行
+     * @param index 列下标
+     * @param operateCell (Cell, RowData) -> void
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> operateCell(int index, BiConsumer<SXSSFCell, Object> operateCell) {
+        sheetOperate.operateCell(index, operateCell);
+        return this;
+    }
+
+    /**
      * 操作单元格（Cell），每次设置完一行数据之后执行
      * @param operateRow (Row, rowData) -> void
      * @return this
@@ -576,6 +588,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     setValue(cell, value, cellType);
                     setColumnWidth(cell, 0);
                     currentSheet.operateCell(cell, data);
+                    currentSheet.operateCell(cellIndex, cell, data);
                 }
             }
             row.setHeightInPoints(rowHeight);

@@ -28,6 +28,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private List<T> data;
     private Consumer<SXSSFCell> operateTitle;
     private BiConsumer<SXSSFCell, Object> operateCell;
+    private Map<Integer, BiConsumer<SXSSFCell, Object>> operateCellMap;
     private BiConsumer<SXSSFRow, Object> operateRow;
     private BiConsumer<SXSSFSheet, List<T>> operateSheet;
     private List<CellField> fields;
@@ -186,6 +187,23 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     @Override
     public SheetOperate<T> operateCell(BiConsumer<SXSSFCell, Object> operateCell) {
         this.operateCell = operateCell;
+        return this;
+    }
+
+    /**
+     * 操作某一列的单元格（Cell），每次设置数据之后执行
+     * @param index 列下标
+     * @param operateCell (Cell, RowData) -> void
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> operateCell(int index, BiConsumer<SXSSFCell, Object> operateCell) {
+        if (index > 0) {
+            if (operateCellMap == null) {
+                operateCellMap = new HashMap<>(2);
+            }
+            operateCellMap.put(index, operateCell);
+        }
         return this;
     }
 
@@ -439,6 +457,15 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     void operateCell(SXSSFCell cell, Object rowData) {
         if (operateCell != null) {
             operateCell.accept(cell, rowData);
+        }
+    }
+
+    void operateCell(int index, SXSSFCell cell, Object rowData) {
+        if (cellStyleFunMap != null) {
+            BiConsumer<SXSSFCell, Object> operateCell = operateCellMap.get(index);
+            if (operateCell != null) {
+                operateCell.accept(cell, rowData);
+            }
         }
     }
 

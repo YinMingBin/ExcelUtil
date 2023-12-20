@@ -96,6 +96,14 @@ public interface Operate<T, R> {
     R operateCell(BiConsumer<SXSSFCell, Object> operateCell);
 
     /**
+     * 操作某一列的单元格（Cell），每次设置数据之后执行
+     * @param index 列下标
+     * @param operateCell (Cell, RowData) -> void
+     * @return this
+     */
+    R operateCell(int index, BiConsumer<SXSSFCell, Object> operateCell);
+
+    /**
      * 操作Row，每次设置完一行数据之后执行
      * @param operateRow (Row, RowData) -> void
      * @return this
