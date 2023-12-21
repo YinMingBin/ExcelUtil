@@ -21,8 +21,9 @@ import java.util.stream.Collectors;
  * @author YinMingBin
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
-public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
+public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private SXSSFWorkbook workbook;
+    private DataFormat dataFormat;
     private SXSSFSheet sheet;
     private String sheetName;
     private List<T> data;
@@ -48,21 +49,41 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         this.tClass = tClass;
     }
 
+    private SheetOperate(Class<T> tClass, SXSSFWorkbook workbook) {
+        this.tClass = tClass;
+        this.setWorkbook(workbook);
+    }
+
     private SheetOperate(Class<T> tClass, String sheetName) {
         this.tClass = tClass;
         this.sheetName = sheetName;
+    }
+
+    private SheetOperate(Class<T> tClass, String sheetName, SXSSFWorkbook workbook) {
+        this.tClass = tClass;
+        this.sheetName = sheetName;
+        this.setWorkbook(workbook);
     }
 
     public static <R> SheetOperate<R> create(Class<R> tClass) {
         return new SheetOperate<>(tClass);
     }
 
+    public static <R> SheetOperate<R> create(Class<R> tClass, SXSSFWorkbook workbook) {
+        return new SheetOperate<>(tClass, workbook);
+    }
+
     public static <R> SheetOperate<R> create(Class<R> tClass, String sheetName) {
         return new SheetOperate<>(tClass, sheetName);
     }
 
-    void setWorkbook(SXSSFWorkbook workbook) {
+    public static <R> SheetOperate<R> create(Class<R> tClass, String sheetName, SXSSFWorkbook workbook) {
+        return new SheetOperate<>(tClass, sheetName);
+    }
+
+    public void setWorkbook(SXSSFWorkbook workbook) {
         this.workbook = workbook;
+        this.dataFormat = workbook.createDataFormat();
     }
 
     /**
@@ -418,7 +439,7 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
             cellField.setCellType(column.getType());
             CellStyle cellStyle = getCellStyle();
             Font font = workbook.getFontAt(cellStyle.getFontIndex());
-            column.settingStyle(cellStyle, workbook.createDataFormat(), font);
+            column.settingStyle(cellStyle, dataFormat, font);
 
             cellField.setCellStyle(cellStyle);
             int width = column.getWidth();
@@ -520,5 +541,9 @@ public final class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     public boolean isAutoColumnWidth() {
         return autoColumnWidth;
+    }
+
+    public SXSSFWorkbook getWorkbook() {
+        return workbook;
     }
 }

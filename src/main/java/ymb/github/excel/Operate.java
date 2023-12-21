@@ -13,7 +13,7 @@ import java.util.function.Consumer;
  * @author WuLiao
  */
 @SuppressWarnings({"UnusedReturnValue", "unchecked"})
-public interface Operate<T, R> {
+interface Operate<T, R> {
 
     /**
      * 设置数据源

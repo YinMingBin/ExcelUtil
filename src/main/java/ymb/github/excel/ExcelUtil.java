@@ -23,7 +23,7 @@ import java.util.function.Consumer;
  * @author YinMingBin
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
-public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
+public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     private final SheetOperate<T> sheetOperate;
     private final Stack<SheetOperate<?>> otherSheet = new Stack<>();
     private final SXSSFWorkbook workbook;
@@ -33,15 +33,13 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
 
     public ExcelUtil(Class<T> tClass) {
         this.workbook = new SXSSFWorkbook();
-        this.sheetOperate = SheetOperate.create(tClass);
-        this.sheetOperate.setWorkbook(this.workbook);
+        this.sheetOperate = SheetOperate.create(tClass, workbook);
         otherSheet.add(this.sheetOperate);
     }
 
     public ExcelUtil(Class<T> tClass, String sheetName) {
         this.workbook = new SXSSFWorkbook();
-        this.sheetOperate = SheetOperate.create(tClass, sheetName);
-        this.sheetOperate.setWorkbook(workbook);
+        this.sheetOperate = SheetOperate.create(tClass, sheetName, workbook);
         otherSheet.add(this.sheetOperate);
     }
 
@@ -435,7 +433,7 @@ public final class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         int[] ints = setExcelTitle(fieldList, startRow, 0);
         int maxRow = ints[0], maxCell = ints[1];
         mergeTitle(startRow, maxRow, fieldList);
-        // 标题
+        // 大标题
         if (excelClass != null) {
             SXSSFCell cell = sheet.createRow(0).createCell(0);
             String title = excelClass.title();
