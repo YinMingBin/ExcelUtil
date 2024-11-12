@@ -2,11 +2,14 @@ package ymb.github.excel;
 
 import org.apache.commons.math3.util.Pair;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.util.StringUtil;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFDataValidation;
+import org.apache.poi.xssf.usermodel.XSSFDataValidationConstraint;
+import org.apache.poi.xssf.usermodel.XSSFDataValidationHelper;
 import ymb.github.excel.annotation.AllFieldColumn;
 
 import java.lang.reflect.Field;
@@ -47,6 +50,8 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private Consumer<CellStyle> titleStyleFun = cell -> {};
     private boolean autoColumnWidth = false;
     private List<Pair<SFunction<T, ?>, ExcelColumnClass>> columnFunctions;
+    private Map<Integer, Collection<String>> dataValidationMap;
+    private Map<String, Collection<String>> dataValidationByKeyMap;
 
     private SheetOperate(Class<T> tClass) {
         this.tClass = tClass;
@@ -337,6 +342,61 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         return this;
     }
 
+    /**
+     * 设置数据校验（下拉序列）
+     * @param index 列下标
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> setDataValidationList(int index, Collection<String> list) {
+        if (index >= 0 && list != null && !list.isEmpty()) {
+            if (dataValidationMap == null) {
+                dataValidationMap = new HashMap<>();
+            }
+            dataValidationMap.put(index, list);
+        }
+        return this;
+    }
+
+    /**
+     * 设置数据校验（下拉序列）
+     * @param key 列key
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> setDataValidationList(String key, Collection<String> list) {
+        if (key != null && !key.isEmpty() && list != null && !list.isEmpty()) {
+            if (dataValidationByKeyMap == null) {
+                dataValidationByKeyMap = new HashMap<>();
+            }
+            dataValidationByKeyMap.put(key, list);
+        }
+        return this;
+    }
+
+    /**
+     * 设置数据校验（下拉序列）
+     * @param firstRow 开始行
+     * @param firstCol 开始列
+     * @param endRow 结束行
+     * @param endCol 结束列
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> setDataValidationList(int firstRow, int firstCol, int endRow, int endCol, Collection<String> list) {
+        String[] dataList = list.toArray(new String[0]);
+        SXSSFSheet sheet = this.getSheet();
+        XSSFDataValidationHelper dvHelper = new XSSFDataValidationHelper(sheet.getDrawingPatriarch().getSheet());
+        DataValidationConstraint dvConstraint = dvHelper.createExplicitListConstraint(dataList);
+        CellRangeAddressList addressList = new CellRangeAddressList(firstRow, endRow, firstCol, endCol);
+        DataValidation validation = dvHelper.createValidation(dvConstraint, addressList);
+        sheet.addValidationData(validation);
+        return this;
+    }
+
     SXSSFSheet getSheet() {
         if (sheet == null) {
             sheet = sheetName == null ? workbook.createSheet() : workbook.createSheet(sheetName);
@@ -602,5 +662,13 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     public SXSSFWorkbook getWorkbook() {
         return workbook;
+    }
+
+    public Map<Integer, Collection<String>> getDataValidationMap() {
+        return dataValidationMap;
+    }
+
+    public Map<String, Collection<String>> getDataValidationByKeyMap() {
+        return dataValidationByKeyMap;
     }
 }

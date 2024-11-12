@@ -30,6 +30,9 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     private SheetOperate<?> currentSheet;
     private String csv;
     private final Map<Integer, Integer> maxWidthMap = new HashMap<>();
+    // int[0] = firstRow, int[1] = firstCol (firstCol == endCol)
+    private Map<Integer, int[]> columnRangeMap = new HashMap<>();
+    private Map<String, int[]> columnRangeByKeyMap = new HashMap<>();
 
     public ExcelUtil(Class<T> tClass) {
         this.workbook = new SXSSFWorkbook();
@@ -41,6 +44,22 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         this.workbook = new SXSSFWorkbook();
         this.sheetOperate = SheetOperate.create(tClass, sheetName, workbook);
         otherSheet.add(this.sheetOperate);
+    }
+
+    public ExcelUtil(Class<T> tClass, List<T> data) {
+        this.workbook = new SXSSFWorkbook();
+        this.sheetOperate = SheetOperate.create(tClass, workbook);
+        otherSheet.add(this.sheetOperate);
+
+        this.setData(data);
+    }
+
+    public ExcelUtil(Class<T> tClass, String sheetName, List<T> data) {
+        this.workbook = new SXSSFWorkbook();
+        this.sheetOperate = SheetOperate.create(tClass, sheetName, workbook);
+        otherSheet.add(this.sheetOperate);
+
+        this.setData(data);
     }
 
     public SXSSFWorkbook getWorkbook() {
@@ -266,6 +285,45 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
+     * 设置数据校验（下拉序列）
+     * @param index 列下标
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> setDataValidationList(int index, Collection<String> list) {
+        sheetOperate.setDataValidationList(index, list);
+        return this;
+    }
+
+    /**
+     * 设置数据校验（下拉序列）
+     * @param key 列下标
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> setDataValidationList(String key, Collection<String> list) {
+        sheetOperate.setDataValidationList(key, list);
+        return this;
+    }
+
+    /**
+     * 设置数据校验（下拉序列）
+     * @param firstRow 开始行
+     * @param firstCol 开始列
+     * @param endRow 结束行
+     * @param endCol 结束列
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> setDataValidationList(int firstRow, int firstCol, int endRow, int endCol, Collection<String> list) {
+        sheetOperate.setDataValidationList(firstRow, firstCol, endRow, endCol, list);
+        return this;
+    }
+
+    /**
      * 添加Sheet
      * @param sheetOperate SheetOperate.create
      * @return this
@@ -286,6 +344,8 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
         }
         for (SheetOperate<?> operate : otherSheet) {
             this.currentSheet = operate;
+            this.columnRangeMap = new HashMap<>();
+            this.columnRangeByKeyMap = new HashMap<>();
             operate.clearSheet();
             List<CellField> fields = operate.getFields();
             if (fields.isEmpty()) {
@@ -295,11 +355,32 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                 operate.getSheet().trackAllColumnsForAutoSizing();
                 maxWidthMap.clear();
             }
-            int maxRow = setExcelTitle(fields);
-            setExcelData(operate.getData(), fields, maxRow + 1);
+            final int dataFirstRow = setExcelTitle(fields) + 1;
+            final int dataEndRow = setExcelData(operate.getData(), fields, dataFirstRow);
+            // 设置数据验证
+            Map<Integer, Collection<String>> dataValidationMap = operate.getDataValidationMap();
+            setDataValidation(operate, dataEndRow, dataValidationMap, columnRangeMap);
+            Map<String, Collection<String>> dataValidationByKeyMap = operate.getDataValidationByKeyMap();
+            setDataValidation(operate, dataEndRow, dataValidationByKeyMap, columnRangeByKeyMap);
             operate.operateSheet();
         }
         return this;
+    }
+
+    private <K> void setDataValidation(SheetOperate<?> operate,
+                                       int endRow,
+                                       Map<K, Collection<String>> dataValidationMap,
+                                       Map<K, int[]> columnRangeMap) {
+        if (dataValidationMap != null) {
+            dataValidationMap.forEach((key, value) -> {
+                int[] ranges = columnRangeMap.get(key);
+                if (ranges != null) {
+                    int firstRow = ranges[0];
+                    int firstCol = ranges[1];
+                    operate.setDataValidationList(firstRow, firstCol, endRow, firstCol, value);
+                }
+            });
+        }
     }
 
     /**
@@ -612,6 +693,12 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     currentSheet.operateCell(cell, data);
                     currentSheet.operateCell(cellField.getKey(), cell, data);
                     currentSheet.operateCell(cellIndex, cell, data);
+                    int[] ranges = {rowIndexCopy, cellIndex};
+                    columnRangeMap.put(cellIndex, ranges);
+                    String key = cellField.getKey();
+                    if (key != null && !key.isEmpty()) {
+                        columnRangeByKeyMap.put(key, ranges);
+                    }
                 }
             }
             row.setHeightInPoints(rowHeight);

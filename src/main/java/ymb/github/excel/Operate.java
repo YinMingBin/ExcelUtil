@@ -5,6 +5,7 @@ import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -153,4 +154,31 @@ interface Operate<T, R> {
      * @return this
      */
     R autoColumnWidth();
+
+    /**
+     * 设置数据校验（下拉序列）
+     * @param index 列下标
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    R setDataValidationList(int index, Collection<String> list);
+
+    /**
+     * 设置数据校验（下拉序列）
+     * @param key 列key
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    R setDataValidationList(String key, Collection<String> list);
+
+    /**
+     * 设置数据校验（下拉序列）
+     * @param firstRow 开始行
+     * @param firstCol 开始列
+     * @param endRow 结束行
+     * @param endCol 结束列
+     * @param list 校验列表（下拉列表）
+     * @return this
+     */
+    R setDataValidationList(int firstRow, int firstCol, int endRow, int endCol, Collection<String> list);
 }
