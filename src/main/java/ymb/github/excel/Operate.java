@@ -82,6 +82,14 @@ interface Operate<T, R> {
     R operateCellStyle(int index, BiConsumer<CellStyle, Object> cellStyle);
 
     /**
+     * 操作某一列单元格（Cell）的样式 (设置Cell时调用)
+     * @param key 列key
+     * @param cellStyle (CellStyle, RowData) -> void
+     * @return this
+     */
+    R operateCellStyle(String key, BiConsumer<CellStyle, Object> cellStyle);
+
+    /**
      * 操作表头，每次设置表头之后执行
      * @param operateTitle (Cell) -> void
      * @return this
@@ -102,6 +110,14 @@ interface Operate<T, R> {
      * @return this
      */
     R operateCell(int index, BiConsumer<SXSSFCell, Object> operateCell);
+
+    /**
+     * 操作某一列的单元格（Cell），每次设置数据之后执行
+     * @param key 列key
+     * @param operateCell (Cell, RowData) -> void
+     * @return this
+     */
+    R operateCell(String key, BiConsumer<SXSSFCell, Object> operateCell);
 
     /**
      * 操作Row，每次设置完一行数据之后执行

@@ -1,7 +1,8 @@
 package ymb.github.excel;
 
-import javafx.util.Pair;
+import org.apache.commons.math3.util.Pair;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.util.StringUtil;
 import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
@@ -30,6 +31,7 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private Consumer<SXSSFCell> operateTitle;
     private BiConsumer<SXSSFCell, Object> operateCell;
     private Map<Integer, BiConsumer<SXSSFCell, Object>> operateCellMap;
+    private Map<String, BiConsumer<SXSSFCell, Object>> operateCellByKeyMap;
     private BiConsumer<SXSSFRow, Object> operateRow;
     private BiConsumer<SXSSFSheet, List<T>> operateSheet;
     private List<CellField> fields;
@@ -40,6 +42,7 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private float rowHeight = 20;
     private int columnWidth = 10;
     private Map<Integer, BiConsumer<CellStyle, Object>> cellStyleFunMap;
+    private Map<String, BiConsumer<CellStyle, Object>> cellStyleFunByKeyMap;
     private Consumer<CellStyle> cellStyleFun = cell -> {};
     private Consumer<CellStyle> titleStyleFun = cell -> {};
     private boolean autoColumnWidth = false;
@@ -182,10 +185,29 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      */
     @Override
     public SheetOperate<T> operateCellStyle(int index, BiConsumer<CellStyle, Object> cellStyle) {
-        if (cellStyleFunMap == null) {
-            cellStyleFunMap = new HashMap<>(5);
+        if (index >= 0) {
+            if (cellStyleFunMap == null) {
+                cellStyleFunMap = new HashMap<>(5);
+            }
+            cellStyleFunMap.put(index, cellStyle);
         }
-        cellStyleFunMap.put(index, cellStyle);
+        return this;
+    }
+
+    /**
+     * 操作某一列单元格（Cell）的样式 (设置Cell时调用)
+     * @param key 列key
+     * @param cellStyle (CellStyle, rowData) -> void
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> operateCellStyle(String key, BiConsumer<CellStyle, Object> cellStyle) {
+        if (key != null && !key.isEmpty()) {
+            if (cellStyleFunByKeyMap == null) {
+                cellStyleFunByKeyMap = new HashMap<>(5);
+            }
+            cellStyleFunByKeyMap.put(key, cellStyle);
+        }
         return this;
     }
 
@@ -219,11 +241,28 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      */
     @Override
     public SheetOperate<T> operateCell(int index, BiConsumer<SXSSFCell, Object> operateCell) {
-        if (index > 0) {
+        if (index >= 0) {
             if (operateCellMap == null) {
                 operateCellMap = new HashMap<>(2);
             }
             operateCellMap.put(index, operateCell);
+        }
+        return this;
+    }
+
+    /**
+     * 操作某一列的单元格（Cell），每次设置数据之后执行
+     * @param key 列key
+     * @param operateCell (Cell, RowData) -> void
+     * @return this
+     */
+    @Override
+    public SheetOperate<T> operateCell(String key, BiConsumer<SXSSFCell, Object> operateCell) {
+        if (key != null && !key.isEmpty()) {
+            if (operateCellByKeyMap == null) {
+                operateCellByKeyMap = new HashMap<>();
+            }
+            operateCellByKeyMap.put(key, operateCell);
         }
         return this;
     }
@@ -399,7 +438,8 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     private CellField getCellField(Class<?> tClass, Field field, ExcelColumnClass column) {
         CellField cellField = new CellField();
-        cellField.setIndex(column.getIndex());
+        short index = column.getIndex();
+        cellField.setIndex(index);
         String name = field.getName();
         char[] chars = name.toCharArray();
         chars[0] = Character.toUpperCase(chars[0]);
@@ -481,8 +521,17 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         }
     }
 
+    void operateCell(String key, SXSSFCell cell, Object rowData) {
+        if (operateCellByKeyMap != null && key != null && !key.isEmpty()) {
+            BiConsumer<SXSSFCell, Object> operateCell = operateCellByKeyMap.get(key);
+            if (operateCell != null) {
+                operateCell.accept(cell, rowData);
+            }
+        }
+    }
+
     void operateCell(int index, SXSSFCell cell, Object rowData) {
-        if (cellStyleFunMap != null) {
+        if (operateCellMap != null) {
             BiConsumer<SXSSFCell, Object> operateCell = operateCellMap.get(index);
             if (operateCell != null) {
                 operateCell.accept(cell, rowData);
@@ -498,15 +547,23 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     CellStyle operateCellStyle(CellField cellField, Object rowData) {
         CellStyle cellStyle = cellField.getCellStyle();
-        if (cellStyleFunMap == null) {
-            return cellStyle;
+        if (cellStyleFunByKeyMap != null) {
+            String key = cellField.getKey();
+            BiConsumer<CellStyle, Object> cellStyleFun = cellStyleFunByKeyMap.get(key);
+            if (cellStyleFun != null) {
+                CellStyle newCellStyle = this.getCellStyle();
+                cellStyleFun.accept(newCellStyle, rowData);
+                cellStyle = newCellStyle;
+            }
         }
-        int index = cellField.getIndex();
-        BiConsumer<CellStyle, Object> cellStyleFun = cellStyleFunMap.get(index);
-        if (cellStyleFun != null) {
-            CellStyle newCellStyle = this.getCellStyle();
-            cellStyleFun.accept(newCellStyle, rowData);
-            cellStyle = newCellStyle;
+        if (cellStyleFunMap != null) {
+            int index = cellField.getIndex();
+            BiConsumer<CellStyle, Object> cellStyleFun = cellStyleFunMap.get(index);
+            if (cellStyleFun != null) {
+                CellStyle newCellStyle = this.getCellStyle();
+                cellStyleFun.accept(newCellStyle, rowData);
+                cellStyle = newCellStyle;
+            }
         }
         return cellStyle;
     }

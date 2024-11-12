@@ -12,6 +12,7 @@ import java.util.function.Function;
 class CellField {
     private int index;
     private String title;
+    private String key;
     private CellType cellType;
     private Class<?> fieldType;
     private CellStyle cellStyle;
@@ -41,6 +42,14 @@ class CellField {
 
     public String getTitle() {
         return title;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public CellType getCellType() {

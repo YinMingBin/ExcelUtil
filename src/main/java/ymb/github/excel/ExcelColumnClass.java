@@ -15,6 +15,7 @@ public class ExcelColumnClass {
     private static ExcelColumn defaultColumn;
     private String title;
     private short index;
+    private String key;
     private CellType type;
     private String format;
     private int width;
@@ -46,6 +47,7 @@ public class ExcelColumnClass {
         String title = column.title();
         if (title.isEmpty()) {title = column.value();}
         columnClass.setTitle(title);
+        columnClass.setKey(column.key());
         columnClass.setIndex(column.index());
         columnClass.setType(column.type());
         columnClass.setFormat(column.format());
@@ -112,6 +114,15 @@ public class ExcelColumnClass {
 
     public ExcelColumnClass setTitle(String title) {
         this.title = title;
+        return this;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public ExcelColumnClass setKey(String key) {
+        this.key = key;
         return this;
     }
 

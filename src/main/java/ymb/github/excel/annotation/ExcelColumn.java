@@ -20,6 +20,8 @@ public @interface ExcelColumn {
     String value() default "";
     /** 表头 */
     String title() default "";
+    /** 唯一标识 */
+    String key() default "";
     /** 所属位置 */
     short index() default -1;
     /** 数据类型 */

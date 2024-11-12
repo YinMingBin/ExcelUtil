@@ -129,7 +129,7 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 设置单元格（Cell）l样式
+     * 设置单元格（Cell）的样式
      * @param cellStyleFun (CellStyle) -> void
      * @return this
      */
@@ -148,6 +148,18 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     @Override
     public ExcelUtil<T> operateCellStyle(int columnIndex, BiConsumer<CellStyle, Object> cellStyle) {
         sheetOperate.operateCellStyle(columnIndex, cellStyle);
+        return this;
+    }
+
+    /**
+     * 操作某一列单元格（Cell）的样式 (设置完数据时调用)
+     * @param columnKey 列key
+     * @param cellStyle (CellStyle, rowData) -> void
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> operateCellStyle(String columnKey, BiConsumer<CellStyle, Object> cellStyle) {
+        sheetOperate.operateCellStyle(columnKey, cellStyle);
         return this;
     }
 
@@ -182,6 +194,18 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     @Override
     public ExcelUtil<T> operateCell(int index, BiConsumer<SXSSFCell, Object> operateCell) {
         sheetOperate.operateCell(index, operateCell);
+        return this;
+    }
+
+    /**
+     * 操作某一列的单元格（Cell），每次设置数据之后执行
+     * @param key 列key
+     * @param operateCell (Cell, RowData) -> void
+     * @return this
+     */
+    @Override
+    public ExcelUtil<T> operateCell(String key, BiConsumer<SXSSFCell, Object> operateCell) {
+        sheetOperate.operateCell(key, operateCell);
         return this;
     }
 
@@ -586,6 +610,7 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     setValue(cell, value, cellType);
                     setColumnWidth(cell, 0);
                     currentSheet.operateCell(cell, data);
+                    currentSheet.operateCell(cellField.getKey(), cell, data);
                     currentSheet.operateCell(cellIndex, cell, data);
                 }
             }
