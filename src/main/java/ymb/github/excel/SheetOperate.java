@@ -7,9 +7,6 @@ import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import org.apache.poi.xssf.usermodel.XSSFDataValidation;
-import org.apache.poi.xssf.usermodel.XSSFDataValidationConstraint;
-import org.apache.poi.xssf.usermodel.XSSFDataValidationHelper;
 import ymb.github.excel.annotation.AllFieldColumn;
 
 import java.lang.reflect.Field;
@@ -52,6 +49,7 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
     private List<Pair<SFunction<T, ?>, ExcelColumnClass>> columnFunctions;
     private Map<Integer, Collection<String>> dataValidationMap;
     private Map<String, Collection<String>> dataValidationByKeyMap;
+    private List<DataValidationItem> dataValidationList;
 
     private SheetOperate(Class<T> tClass) {
         this.tClass = tClass;
@@ -387,14 +385,29 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
      */
     @Override
     public SheetOperate<T> setDataValidationList(int firstRow, int firstCol, int endRow, int endCol, Collection<String> list) {
+        if (list == null || list.isEmpty()) {
+            return this;
+        }
+
+        if (dataValidationList == null) {
+            dataValidationList = new ArrayList<>();
+        }
+
+        dataValidationList.add(new DataValidationItem(firstRow, firstCol, endRow, endCol, list));
+        return this;
+    }
+
+    public void setDataValidation(int firstRow, int firstCol, int endRow, int endCol, Collection<String> list) {
         String[] dataList = list.toArray(new String[0]);
         SXSSFSheet sheet = this.getSheet();
-        XSSFDataValidationHelper dvHelper = new XSSFDataValidationHelper(sheet.getDrawingPatriarch().getSheet());
+        DataValidationHelper dvHelper = sheet.getDataValidationHelper();
         DataValidationConstraint dvConstraint = dvHelper.createExplicitListConstraint(dataList);
         CellRangeAddressList addressList = new CellRangeAddressList(firstRow, endRow, firstCol, endCol);
         DataValidation validation = dvHelper.createValidation(dvConstraint, addressList);
+        validation.setShowErrorBox(true);
+        validation.setSuppressDropDownArrow(true);
+        validation.setShowPromptBox(true);
         sheet.addValidationData(validation);
-        return this;
     }
 
     SXSSFSheet getSheet() {
@@ -500,6 +513,8 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
         CellField cellField = new CellField();
         short index = column.getIndex();
         cellField.setIndex(index);
+        String key = column.getKey();
+        cellField.setKey(key);
         String name = field.getName();
         char[] chars = name.toCharArray();
         chars[0] = Character.toUpperCase(chars[0]);
@@ -670,5 +685,9 @@ public class SheetOperate<T> implements Operate<T, SheetOperate<T>>{
 
     public Map<String, Collection<String>> getDataValidationByKeyMap() {
         return dataValidationByKeyMap;
+    }
+
+    public List<DataValidationItem> getDataValidationList() {
+        return dataValidationList;
     }
 }

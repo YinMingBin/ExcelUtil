@@ -6,9 +6,13 @@ import org.apache.poi.xssf.streaming.SXSSFCell;
 import org.apache.poi.xssf.streaming.SXSSFRow;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import ymb.github.excel.annotation.ExcelClass;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -339,8 +343,9 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
      * @return this
      */
     public ExcelUtil<T> execute() {
-        for (int i = workbook.getNumberOfSheets() - 1; i >= 0; i--) {
-            workbook.removeSheetAt(i);
+        XSSFWorkbook xssfWorkbook = workbook.getXSSFWorkbook();
+        for (int i = xssfWorkbook.getNumberOfSheets() - 1; i >= 0; i--) {
+            xssfWorkbook.removeSheetAt(i);
         }
         for (SheetOperate<?> operate : otherSheet) {
             this.currentSheet = operate;
@@ -362,6 +367,15 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             setDataValidation(operate, dataEndRow, dataValidationMap, columnRangeMap);
             Map<String, Collection<String>> dataValidationByKeyMap = operate.getDataValidationByKeyMap();
             setDataValidation(operate, dataEndRow, dataValidationByKeyMap, columnRangeByKeyMap);
+            List<DataValidationItem> dataValidationList = operate.getDataValidationList();
+            for (DataValidationItem dataValidationItem : dataValidationList) {
+                int firstRow = dataValidationItem.getFirstRow();
+                int firstCol = dataValidationItem.getFirstCol();
+                int endRow = dataValidationItem.getEndRow();
+                int endCol = dataValidationItem.getEndCol();
+                Collection<String> data = dataValidationItem.getData();
+                operate.setDataValidation(firstRow, firstCol, endRow, endCol, data);
+            }
             operate.operateSheet();
         }
         return this;
@@ -377,7 +391,7 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                 if (ranges != null) {
                     int firstRow = ranges[0];
                     int firstCol = ranges[1];
-                    operate.setDataValidationList(firstRow, firstCol, endRow, firstCol, value);
+                    operate.setDataValidation(firstRow, firstCol, endRow, firstCol, value);
                 }
             });
         }
@@ -694,10 +708,10 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
                     currentSheet.operateCell(cellField.getKey(), cell, data);
                     currentSheet.operateCell(cellIndex, cell, data);
                     int[] ranges = {rowIndexCopy, cellIndex};
-                    columnRangeMap.put(cellIndex, ranges);
+                    columnRangeMap.putIfAbsent(cellIndex, ranges);
                     String key = cellField.getKey();
                     if (key != null && !key.isEmpty()) {
-                        columnRangeByKeyMap.put(key, ranges);
+                        columnRangeByKeyMap.putIfAbsent(key, ranges);
                     }
                 }
             }

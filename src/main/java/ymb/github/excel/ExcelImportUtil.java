@@ -5,14 +5,18 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import ymb.github.excel.annotation.AllFieldColumn;
 import ymb.github.excel.annotation.ExcelClass;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -26,15 +30,32 @@ public class ExcelImportUtil {
     private final Workbook workbook;
     private Sheet sheet;
     private int startRow;
+    private Map<Integer, Function<Cell, ?>> getValueMap;
+    private Map<String, Function<Cell, ?>> getValueByKeyMap;
 
     /**
-     * 唯一的构造方法
+     * 构造方法
      *
      * @param is Excel文件输入流
      * @throws IOException io异常
      */
     public ExcelImportUtil(InputStream is) throws IOException {
         this.workbook = new XSSFWorkbook(is);
+    }
+
+    /**
+     * 构造方法
+     *
+     * @param path Excel文件路径
+     * @throws IOException io异常
+     */
+    public ExcelImportUtil(String path) throws IOException {
+        InputStream is = getFileInputStream(path);
+        this.workbook = new XSSFWorkbook(is);
+    }
+
+    public static InputStream getFileInputStream(String path) throws IOException {
+        return new BufferedInputStream(Files.newInputStream(Paths.get(path)));
     }
 
     /**
@@ -94,6 +115,50 @@ public class ExcelImportUtil {
         List<T> dataList = util.read(tClass, 0);
         util.close();
         return dataList;
+    }
+
+    /**
+     * 读取Excel文件中的数据（读取第一个Sheet的数据）
+     *
+     * @param path   Excel文件地址
+     * @param tClass 数据类型对象
+     * @param <T>    数据类型
+     * @return 数据集
+     * @throws IOException io异常
+     */
+    public static <T> List<T> read(String path, Class<T> tClass) throws IOException {
+        InputStream is = getFileInputStream(path);
+        return read(is, tClass);
+    }
+
+    /**
+     * 读取Excel文件中的数据
+     *
+     * @param path      Excel文件地址
+     * @param tClass    数据类型对象
+     * @param sheetName Excel中Sheet的名称
+     * @param <T>       数据类型
+     * @return 数据集
+     * @throws IOException io异常
+     */
+    public static <T> List<T> read(String path, Class<T> tClass, String sheetName) throws IOException {
+        InputStream is = getFileInputStream(path);
+        return read(is, tClass, sheetName);
+    }
+
+    /**
+     * 读取Excel文件中的数据
+     *
+     * @param path       Excel文件地址
+     * @param tClass     数据类型对象
+     * @param sheetIndex Excel中Sheet的下标
+     * @param <T>        数据类型
+     * @return 数据集
+     * @throws IOException io异常
+     */
+    public static <T> List<T> read(String path, Class<T> tClass, int sheetIndex) throws IOException {
+        InputStream is = getFileInputStream(path);
+        return read(is, tClass, sheetIndex);
     }
 
     /**
@@ -197,6 +262,22 @@ public class ExcelImportUtil {
         return getDataList(tClass, getCellFields.get(), startRow);
     }
 
+    public ExcelImportUtil getValue(int index, Function<Cell, ?> getFun) {
+        if (getValueMap == null) {
+            getValueMap = new HashMap<>();
+        }
+        getValueMap.put(index, getFun);
+        return this;
+    }
+
+    public ExcelImportUtil getValue(String key, Function<Cell, ?> getFun) {
+        if (getValueByKeyMap == null) {
+            getValueByKeyMap = new HashMap<>();
+        }
+        getValueByKeyMap.put(key, getFun);
+        return this;
+    }
+
     private List<CellField> getFields(Class<?> tClass, int rowIndex) {
         return getFields(tClass, rowIndex, tClass.getDeclaredFields());
     }
@@ -231,6 +312,7 @@ public class ExcelImportUtil {
         Class<?> type = field.getType();
         cellField.setFieldType(type);
         cellField.setIndex(column.getIndex());
+        cellField.setKey(column.getKey());
         String name = field.getName();
         char[] chars = name.toCharArray();
         chars[0] = Character.toUpperCase(chars[0]);
@@ -292,6 +374,21 @@ public class ExcelImportUtil {
                     value = getRowData(fieldType, field.getCellFields(), row);
                 } else {
                     value = getValue(cell, cellType, fieldType);
+                    if (getValueByKeyMap != null) {
+                        String key = field.getKey();
+                        if (key != null && !key.isEmpty()) {
+                            Function<Cell, ?> cellFunction = getValueByKeyMap.get(key);
+                            if (cellFunction != null) {
+                                value = cellFunction.apply(cell);
+                            }
+                        }
+                    }
+                    if (getValueMap != null) {
+                        Function<Cell, ?> cellFunction = getValueMap.get(index);
+                        if (cellFunction != null) {
+                            value = cellFunction.apply(cell);
+                        }
+                    }
                 }
                 field.getSettingFun().accept(t, value);
             }
@@ -335,10 +432,12 @@ public class ExcelImportUtil {
             }
         } else if (CellType.BOOLEAN.equals(cellType)) {
             value = cell.getBooleanCellValue();
-        } else if (CellType.STRING.equals(cellType)) {
-            value = cell.getStringCellValue();
-        } else if (CellType.FORMULA.equals(cellType)) {
-            value = cell.getStringCellValue();
+        } else if (CellType.STRING.equals(cellType) || CellType.FORMULA.equals(cellType)) {
+            try {
+                value = cell.getStringCellValue();
+            } catch (IllegalStateException e) {
+                value = cell.toString();
+            }
         }
         return value;
     }
