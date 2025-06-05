@@ -368,13 +368,15 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
             Map<String, Collection<String>> dataValidationByKeyMap = operate.getDataValidationByKeyMap();
             setDataValidation(operate, dataEndRow, dataValidationByKeyMap, columnRangeByKeyMap);
             List<DataValidationItem> dataValidationList = operate.getDataValidationList();
-            for (DataValidationItem dataValidationItem : dataValidationList) {
-                int firstRow = dataValidationItem.getFirstRow();
-                int firstCol = dataValidationItem.getFirstCol();
-                int endRow = dataValidationItem.getEndRow();
-                int endCol = dataValidationItem.getEndCol();
-                Collection<String> data = dataValidationItem.getData();
-                operate.setDataValidation(firstRow, firstCol, endRow, endCol, data);
+            if (dataValidationList != null) {
+                for (DataValidationItem dataValidationItem : dataValidationList) {
+                    int firstRow = dataValidationItem.getFirstRow();
+                    int firstCol = dataValidationItem.getFirstCol();
+                    int endRow = dataValidationItem.getEndRow();
+                    int endCol = dataValidationItem.getEndCol();
+                    Collection<String> data = dataValidationItem.getData();
+                    operate.setDataValidation(firstRow, firstCol, endRow, endCol, data);
+                }
             }
             operate.operateSheet();
         }
@@ -398,7 +400,7 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 执行并转成byte数组
+     * 转成byte数组
      * @return byte数组
      * @throws IOException write异常
      */
@@ -411,7 +413,7 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 执行并写入OutputStream
+     * 写入OutputStream
      * @param os OutputStream流
      * @return this
      * @throws IOException write异常
@@ -423,7 +425,7 @@ public class ExcelUtil<T> implements Operate<T, ExcelUtil<T>> {
     }
 
     /**
-     * 执行并写入文件
+     * 写入文件
      * @param filePath 文件路径
      * @return this
      * @throws IOException write异常
